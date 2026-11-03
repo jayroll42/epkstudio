@@ -1,0 +1,1524 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EPK Studio</title>
+<meta name="description" content="Build an electronic press kit, cut 1:30 snippets, and send Hit Me Up files.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1a1d23">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EPK Studio">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Cormorant+Garamond:wght@500;700&family=Anton&family=Orbitron:wght@500;800&display=swap">
+<style>
+/* Layout: a mixing-console app — one channel strip of tabs across the top, a level meter for intake progress, work panels below */
+:root{
+  --bg:#eceff2; --panel:#ffffff; --sunk:#f4f6f8; --ink:#15181d; --muted:#5b6370; --line:#d3d8de;
+  --accent:#d97f24; --accent-ink:#9c540e; --on-accent:#1b1205;
+  --ok:#2e8b57; --warn:#c08a12; --peak:#c3392c;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111317; --panel:#1a1d23; --sunk:#14161a; --ink:#e8eaee; --muted:#99a0ac; --line:#2c3139;
+  --accent:#f0a14a; --accent-ink:#f3b26a; --on-accent:#1b1205; --ok:#4cbf7f; --warn:#e2b23d; --peak:#ec5c4e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111317; --panel:#1a1d23; --sunk:#14161a; --ink:#e8eaee; --muted:#99a0ac; --line:#2c3139;
+  --accent:#f0a14a; --accent-ink:#f3b26a; --on-accent:#1b1205; --ok:#4cbf7f; --warn:#e2b23d; --peak:#ec5c4e; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body)}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent-ink)}
+h1,h2,h3{text-wrap:balance;margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+header.top{border-bottom:1px solid var(--line);background:var(--panel)}
+header .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;padding-block:14px}
+.brand{font:800 30px/1 var(--f-display);letter-spacing:.02em;text-transform:uppercase}
+.brand span{color:var(--accent-ink)}
+.meter{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0}
+.meter-label{font:500 11px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.leds{display:flex;gap:3px}
+.led{width:10px;height:18px;border-radius:2px;background:var(--line)}
+.led.on{background:var(--ok)}
+.led.on.hi{background:var(--warn)}
+.led.on.top{background:var(--accent)}
+nav.tabs{background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--panel)}
+nav.tabs .wrap{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{display:flex;align-items:baseline;gap:8px;padding:12px 14px;text-decoration:none;color:var(--muted);font-weight:500;white-space:nowrap;border-bottom:3px solid transparent}
+nav.tabs a small{font:500 10px var(--f-mono);letter-spacing:.08em;opacity:.8}
+nav.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+
+main{padding-block:28px 64px}
+.view{display:grid;gap:22px}
+.view-head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+.view-head h2{font:800 40px/1 var(--f-display);text-transform:uppercase;letter-spacing:.01em}
+.lede{color:var(--muted);max-width:62ch;margin:6px 0 0}
+.eyebrow{font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px 16px;border:1px dashed var(--accent);border-radius:var(--r);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:22px}
+.grid2>*{min-width:0}
+
+/* intake */
+.q{display:grid;grid-template-columns:44px 1fr;gap:4px 14px;padding:18px 0;border-top:1px solid var(--line)}
+.q:first-child{border-top:0;padding-top:0}
+.qn{font:800 28px/1 var(--f-display);color:var(--accent-ink);font-variant-numeric:tabular-nums}
+.q label.qt{font-weight:600;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.tag{font:500 10px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:4px 6px;border-radius:3px;border:1px solid var(--line);color:var(--muted)}
+.tag.req{border-color:var(--accent);color:var(--accent-ink)}
+.tag.done{border-color:var(--ok);color:var(--ok)}
+.hint{color:var(--muted);font-size:13px;margin:2px 0 8px;max-width:70ch}
+.q .body{grid-column:2;min-width:0}
+input[type=text],input[type=url],textarea,select{width:100%;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+textarea{min-height:96px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--sunk);cursor:pointer;user-select:none}
+.chip input{accent-color:var(--accent);margin:0}
+.chip:has(input:checked){border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--panel))}
+.detected{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.det{font:500 11px var(--f-mono);padding:3px 7px;border-radius:3px;background:var(--sunk);border:1px solid var(--line);color:var(--muted)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:500;text-decoration:none;color:var(--ink)}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.status{font-size:13px;color:var(--muted);min-height:1.2em}
+.status.err{color:var(--peak)}
+.status.ok{color:var(--ok)}
+
+/* releases */
+.rel-list{display:grid;gap:16px}
+.rel{display:grid;grid-template-columns:120px 1fr;gap:18px;align-items:start}
+.rel>*{min-width:0}
+.cover{width:120px;aspect-ratio:1;max-width:100%;border-radius:4px;display:grid;place-items:center;overflow:hidden;font:800 34px var(--f-display);color:#fff;background:linear-gradient(135deg,#3a2a55,#b5562b);position:relative}
+.cover img{width:100%;height:100%;object-fit:cover}
+.rel-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.tracks{list-style:none;margin:14px 0 0;padding:0;border-top:1px solid var(--line)}
+.tracks li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.tracks .no{font:500 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.tracks input[type=text]{padding:6px 8px}
+.tr-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:end}
+.pill{font:500 11px var(--f-mono);padding:3px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.ok{border-color:var(--ok);color:var(--ok)}
+.pill.acc{border-color:var(--accent);color:var(--accent-ink)}
+@media (max-width:560px){.rel{grid-template-columns:1fr}.cover{width:96px}.tracks li{grid-template-columns:22px minmax(0,1fr)}.tr-actions{grid-column:2;justify-content:start}}
+
+/* snippet editor */
+.wave-box{position:relative;border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);overflow:hidden;touch-action:none;cursor:grab}
+canvas#wave{display:block;width:100%;height:150px}
+.readout{display:flex;flex-wrap:wrap;gap:8px 28px;font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.readout b{display:block;font:800 26px/1 var(--f-display);letter-spacing:.02em}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:var(--r)}
+.snip-list{display:grid;gap:8px}
+.snip{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r)}
+
+/* research */
+.links-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.links-grid a{display:block;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);text-decoration:none;color:var(--ink);background:var(--sunk);font-weight:500}
+.links-grid a small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.found{white-space:pre-wrap;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-height:60px}
+.found ul{margin:6px 0;padding-left:20px}
+
+/* share */
+.qr-wrap{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.qr-wrap>*{min-width:0}
+#qr{background:#fff;padding:10px;border-radius:4px;width:180px;height:180px;display:grid;place-items:center}
+#qr img,#qr canvas{width:160px!important;height:160px!important}
+@media (max-width:520px){.qr-wrap{grid-template-columns:1fr}}
+ol.steps{margin:0;padding-left:20px;display:grid;gap:8px}
+.mono{font-family:var(--f-mono);font-size:13px;word-break:break-all}
+
+/* EPK preview frame */
+.epk-frame{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.epk-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--sunk);border-bottom:1px solid var(--line)}
+
+/* EPK themes — the artist's own look, fixed colors on purpose */
+.epk{--e-bg:#fff;--e-ink:#111;--e-mute:#555;--e-acc:#2b59c3;--e-line:#e3e3e3;--e-disp:var(--f-body);--e-dw:700;--e-up:none;background:var(--e-bg);color:var(--e-ink);font:16px/1.6 var(--f-body)}
+.epk .e-in{max-width:960px;margin:0 auto;padding:48px max(20px,env(safe-area-inset-left,0px)) 56px;display:grid;gap:44px}
+.epk .e-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:32px;align-items:center}
+.epk .e-photo{aspect-ratio:4/5;max-width:100%;border-radius:4px;background:linear-gradient(160deg,var(--e-acc),var(--e-line));overflow:hidden;display:grid;place-items:center;color:var(--e-bg);font:800 64px var(--f-display)}
+.epk .e-photo img{width:100%;height:100%;object-fit:cover}
+.epk .e-kicker{font:500 12px var(--f-mono);letter-spacing:.18em;text-transform:uppercase;color:var(--e-acc)}
+.epk h1.e-name{font-family:var(--e-disp);font-weight:var(--e-dw);text-transform:var(--e-up);font-size:clamp(44px,8vw,88px);line-height:.95;margin:10px 0 16px;letter-spacing:-.01em}
+.epk .e-ctas{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.epk .e-cta{padding:12px 20px;border-radius:3px;background:var(--e-acc);color:var(--e-bg);text-decoration:none;font-weight:600;border:1px solid var(--e-acc);cursor:pointer}
+.epk .e-cta.alt{background:transparent;color:var(--e-ink);border-color:var(--e-line)}
+.epk h2.e-h{font-family:var(--e-disp);font-weight:var(--e-dw);text-transform:var(--e-up);font-size:28px;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--e-line)}
+.epk .e-bio{max-width:66ch;white-space:pre-wrap}
+.epk .e-rels{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:22px}
+.epk .e-rel .cover{width:100%}
+.epk .e-rel h3{font-family:var(--e-disp);font-weight:var(--e-dw);font-size:20px;margin:10px 0 2px}
+.epk .e-rel p{margin:0;color:var(--e-mute);font-size:14px}
+.epk .e-rel ol{margin:8px 0 0;padding-left:20px;font-size:14px}
+.epk .e-play{background:none;border:1px solid var(--e-line);color:var(--e-ink);border-radius:999px;font-size:12px;padding:2px 9px;margin-left:6px;cursor:pointer}
+.epk audio{width:100%;height:32px;margin-top:4px}
+.epk ul.e-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.epk ul.e-list li{padding-left:18px;position:relative}
+.epk ul.e-list li::before{content:"";position:absolute;left:0;top:.7em;width:8px;height:2px;background:var(--e-acc)}
+.epk .e-links{display:flex;flex-wrap:wrap;gap:8px}
+.epk .e-links a{padding:8px 14px;border:1px solid var(--e-line);border-radius:999px;text-decoration:none;color:var(--e-ink);font-size:14px}
+.epk .e-contact{display:grid;gap:4px;white-space:pre-wrap}
+.epk .e-foot{font-size:12px;color:var(--e-mute);border-top:1px solid var(--e-line);padding-top:16px}
+@media (max-width:680px){.epk .e-hero{grid-template-columns:1fr}.epk .e-in{padding-block:28px 40px;gap:34px}}
+.epk.t-luxury{--e-bg:#0e0c0a;--e-ink:#f1ebe0;--e-mute:#a99f8e;--e-acc:#c9a45c;--e-line:#2e2922;--e-disp:"Cormorant Garamond",Georgia,serif;--e-dw:700}
+.epk.t-street{--e-bg:#f1f0ec;--e-ink:#0d0d0d;--e-mute:#4a4a4a;--e-acc:#e0261b;--e-line:#cfcdc6;--e-disp:"Anton",Impact,sans-serif;--e-dw:400;--e-up:uppercase}
+.epk.t-dark{--e-bg:#0a0a0c;--e-ink:#eceaf2;--e-mute:#9895a5;--e-acc:#8f6bff;--e-line:#24222c;--e-disp:"Big Shoulders Display",Impact,sans-serif;--e-dw:800;--e-up:uppercase}
+.epk.t-minimal{--e-bg:#fafafa;--e-ink:#1d1d1d;--e-mute:#6d6d6d;--e-acc:#1d1d1d;--e-line:#e6e6e6;--e-dw:400}
+.epk.t-futuristic{--e-bg:#05070d;--e-ink:#dff6ff;--e-mute:#7b93a3;--e-acc:#35dcff;--e-line:#14222e;--e-disp:"Orbitron",sans-serif;--e-dw:800;--e-up:uppercase}
+.epk.t-energy{--e-bg:#121012;--e-ink:#fff;--e-mute:#b9adb8;--e-acc:#ff2e63;--e-line:#2e252d;--e-disp:"Anton",Impact,sans-serif;--e-dw:400;--e-up:uppercase}
+.epk.t-clean{--e-disp:"IBM Plex Sans",system-ui,sans-serif;--e-dw:600}
+
+.hmu-inv{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.hmu-inv li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
+.hmu-inv li span:last-child{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.drop{display:grid;gap:4px;place-items:center;text-align:center;padding:26px 16px;border:2px dashed var(--line);border-radius:var(--r);background:var(--sunk);cursor:pointer}
+.drop span{color:var(--muted);font-size:13px}
+.drop.over{border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand">EPK <span>Studio</span></div>
+  <div class="meter" aria-label="Intake progress">
+    <span class="meter-label">Intake level</span>
+    <div class="leds" id="leds"></div>
+    <span class="meter-label" id="meterTxt">0 / 8</span>
+  </div>
+  <div class="row" id="appBar" hidden>
+    <span class="pill" id="offlinePill" hidden>Offline</span>
+    <button class="btn small primary" id="installBtn" type="button" hidden>Install app</button>
+  </div>
+  <p class="hint" id="iosHint" hidden style="margin:0;flex-basis:100%">To install on iPhone or iPad: tap the Share button in Safari, then <strong>Add to Home Screen</strong>.</p>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap">
+  <a href="#intake" data-v="intake"><small>CH1</small>Intake</a>
+  <a href="#releases" data-v="releases"><small>CH2</small>Releases</a>
+  <a href="#snippets" data-v="snippets"><small>CH3</small>Snippets</a>
+  <a href="#research" data-v="research"><small>CH4</small>Artist lookup</a>
+  <a href="#share" data-v="share"><small>CH5</small>Videos &amp; sharing</a>
+  <a href="#epk" data-v="epk"><small>OUT</small>Press kit</a>
+  <a href="#hitmeup" data-v="hitmeup"><small>TX/RX</small>Hit Me Up</a>
+</div></nav>
+
+<main class="wrap">
+  <div id="exampleBanner" class="banner" hidden>
+    <span><strong>Example artist loaded.</strong> Everything here is sample content so you can see how the kit works. Replace it with your own answers.</span>
+    <button class="btn small" id="clearExample" type="button">Start with a blank kit</button>
+  </div>
+
+  <!-- INTAKE -->
+  <section class="view" id="v-intake">
+    <div class="view-head">
+      <div><p class="eyebrow">Digital EPK intake</p><h2>The 10 questions</h2>
+      <p class="lede">Your answers build the press kit. Links you paste are sorted automatically into music, video and social profiles.</p></div>
+    </div>
+    <div class="panel" id="intakeForm"></div>
+  </section>
+
+  <!-- RELEASES -->
+  <section class="view" id="v-releases" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Catalog</p><h2>Albums &amp; singles</h2>
+      <p class="lede">Group your audio into releases. Add the audio files to a track to cut a 90-second snippet from it.</p></div>
+      <div class="row">
+        <button class="btn" type="button" data-add="single">Add single</button>
+        <button class="btn" type="button" data-add="ep">Add EP</button>
+        <button class="btn primary" type="button" data-add="album">Add album</button>
+      </div>
+    </div>
+    <div class="rel-list" id="relList"></div>
+  </section>
+
+  <!-- SNIPPETS -->
+  <section class="view" id="v-snippets" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Snippet cutter</p><h2>1:30 snippets</h2>
+      <p class="lede">Pick a track, drag the window to the best 90 seconds, listen, then export an MP3 for NFC links and wireless sharing.</p></div>
+    </div>
+    <div class="panel view" style="gap:16px">
+      <div class="grid2" style="gap:12px">
+        <div><label class="eyebrow" for="snipTrack">Track</label><select id="snipTrack" style="margin-top:6px"></select></div>
+        <div><span class="eyebrow">Or load a song</span>
+          <div class="row" style="margin-top:6px">
+            <label class="btn" for="snipFile">Choose audio file</label>
+            <input id="snipFile" type="file" accept="audio/*" hidden>
+            <button class="btn" id="demoBeat" type="button">Load a demo beat</button>
+          </div></div>
+      </div>
+      <div id="snipEmpty" class="empty">No audio loaded yet. Choose an MP3, WAV or M4A, attach audio to a track in Releases, or load the demo beat to try the cutter.</div>
+      <div id="snipEditor" hidden style="display:grid;gap:14px">
+        <div class="wave-box" id="waveBox"><canvas id="wave" aria-label="Waveform with the 90-second snippet window highlighted"></canvas></div>
+        <input type="range" id="snipStart" min="0" max="0" step="0.1" value="0" aria-label="Snippet start time">
+        <div class="readout">
+          <div><span class="eyebrow">Start</span><b id="roStart">0:00</b></div>
+          <div><span class="eyebrow">End</span><b id="roEnd">1:30</b></div>
+          <div><span class="eyebrow">Length</span><b id="roLen">1:30</b></div>
+          <div><span class="eyebrow">Track</span><b id="roDur">0:00</b></div>
+        </div>
+        <div class="row">
+          <label class="chip"><input type="checkbox" id="fadeIn" checked> Fade in 2s</label>
+          <label class="chip"><input type="checkbox" id="fadeOut" checked> Fade out 3s</label>
+          <select id="bitrate" style="width:auto"><option value="128">128 kbps (smaller)</option><option value="192" selected>192 kbps</option><option value="256">256 kbps</option></select>
+        </div>
+        <div class="row">
+          <button class="btn" id="playSnip" type="button">Play snippet</button>
+          <button class="btn primary" id="makeSnip" type="button">Create MP3 snippet</button>
+        </div>
+        <p class="status" id="snipStatus" role="status"></p>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 class="eyebrow" style="margin-bottom:12px">Snippets ready to share</h3>
+      <div class="snip-list" id="snipList"></div>
+    </div>
+  </section>
+
+  <!-- RESEARCH -->
+  <section class="view" id="v-research" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Artist lookup</p><h2>Find what's out there</h2>
+      <p class="lede">One-tap searches across the major platforms for your artist name, plus a Claude summary of anything already known about you. Treat the summary as a lead to check, not a fact.</p></div>
+    </div>
+    <div class="panel view" style="gap:14px">
+      <div class="row"><span class="eyebrow">Searching for</span><strong id="lookName">—</strong></div>
+      <div class="links-grid" id="searchLinks"></div>
+    </div>
+    <div class="grid2">
+      <div class="panel view" style="gap:12px">
+        <h3 class="eyebrow">Claude summary</h3>
+        <p class="hint" style="margin:0">Uses your name and links to pull together known press, genres and highlights. It cannot browse live pages, so anything new may be missing.</p>
+        <div class="row"><button class="btn primary" id="runLookup" type="button">Run lookup</button></div>
+        <p class="status" id="lookStatus" role="status"></p>
+        <div class="found" id="lookOut">Run a lookup to see results here.</div>
+        <div class="row" id="lookApply" hidden>
+          <button class="btn small" id="applyHi" type="button">Add highlights to Q7</button>
+        </div>
+      </div>
+      <div class="panel view" style="gap:12px">
+        <h3 class="eyebrow">Bio writer</h3>
+        <p class="hint" style="margin:0">Turns your Q2 answer and highlights into a press-ready bio. It uses only what you've written.</p>
+        <div class="row"><button class="btn primary" id="runBio" type="button">Write a pro bio</button></div>
+        <p class="status" id="bioStatus" role="status"></p>
+        <div class="found" id="bioOut">Your polished bio will appear here.</div>
+        <div class="row" id="bioApply" hidden><button class="btn small" id="useBio" type="button">Use as my bio</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SHARE -->
+  <section class="view" id="v-share" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Distribution</p><h2>Videos, NFC &amp; wireless</h2>
+      <p class="lede">Link every music video to your social accounts, then hand out your kit with an NFC tag, a QR code, or a wireless file transfer.</p></div>
+    </div>
+    <div class="panel view" style="gap:12px">
+      <h3 class="eyebrow">Music videos</h3>
+      <div id="videoList"></div>
+    </div>
+    <div class="grid2">
+      <div class="panel view" style="gap:14px">
+        <h3 class="eyebrow">NFC tag &amp; QR code</h3>
+        <div><label class="eyebrow" for="epkUrl">Where your kit lives online</label>
+          <input id="epkUrl" type="url" placeholder="https://yourname.com/epk" style="margin-top:6px">
+          <p class="hint">Export the kit from the Press kit tab and host it (your website, Linktree, Google Drive), then paste its link here.</p></div>
+        <div class="qr-wrap">
+          <div id="qr" aria-label="QR code for your kit link"></div>
+          <ol class="steps">
+            <li>Buy NTAG215 or NTAG216 stickers or cards. They hold a link, not an audio file.</li>
+            <li>Install a free tag writer such as NFC Tools on your phone.</li>
+            <li>Choose <em>Write → Add a record → URL</em> and paste the link: <span class="mono" id="nfcUrl">—</span></li>
+            <li>Hold the tag to the phone to write it. A tap now opens your kit, where fans hear the snippets.</li>
+          </ol>
+        </div>
+        <div class="row"><button class="btn small" id="copyUrl" type="button">Copy link</button><span class="status" id="copyStatus"></span></div>
+      </div>
+      <div class="panel view" style="gap:12px">
+        <h3 class="eyebrow">Wireless MP3 transfer</h3>
+        <p class="hint" style="margin:0">Save a snippet, then send the MP3 straight to a nearby phone with AirDrop (iPhone, Mac) or Quick Share (Android, Windows). No internet needed on their end.</p>
+        <div class="snip-list" id="snipList2"></div>
+        <p class="hint" style="margin:0">To send the whole kit in one file, use <a href="#hitmeup">Hit Me Up</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- EPK -->
+  <section class="view" id="v-epk" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Output</p><h2>Your press kit</h2>
+      <p class="lede">Styled from your Q9 answer. Export it as a single web page with your snippets built in, ready to host and link to an NFC tag.</p></div>
+      <div class="row">
+        <label class="btn" for="photoFile">Add main photo</label><input id="photoFile" type="file" accept="image/*" hidden>
+        <select id="styleOv" style="width:auto" aria-label="Look">
+          <option value="auto">Look: from Q9</option><option value="clean">Clean</option><option value="luxury">Luxury</option><option value="street">Street</option><option value="dark">Dark</option><option value="minimal">Minimal</option><option value="futuristic">Futuristic</option><option value="energy">High-energy</option>
+        </select>
+        <button class="btn primary" id="exportEpk" type="button">Export kit (.html)</button>
+      </div>
+    </div>
+    <p class="status" id="epkStatus" role="status"></p>
+    <div class="epk-frame">
+      <div class="epk-bar"><span class="eyebrow" id="epkLook">Look</span><span class="eyebrow" id="epkMissing"></span></div>
+      <div id="epkPreview"></div>
+    </div>
+  </section>
+
+  <!-- HIT ME UP -->
+  <section class="view" id="v-hitmeup" hidden>
+    <div class="view-head">
+      <div><p class="eyebrow">Send &amp; receive</p><h2>Hit Me Up</h2>
+      <p class="lede">Bundle the whole kit into one Hit Me Up file: profile, releases, 1:30 snippets, videos, socials and a contact card. Send it, and open the ones other artists send you.</p></div>
+    </div>
+    <div class="grid2">
+      <div class="panel view" style="gap:12px">
+        <h3 class="eyebrow">Send yours</h3>
+        <ul class="hmu-inv" id="hmuInv"></ul>
+        <div class="row">
+          <button class="btn" id="hmuPreview" type="button">Preview my Hit Me Up</button>
+          <button class="btn primary" id="hmuExport" type="button">Export Hit Me Up file</button>
+          <button class="btn primary" id="hmuShare" type="button" hidden>Send with…</button>
+        </div>
+        <p class="status" id="hmuStatus" role="status"></p>
+        <p class="hint" style="margin:0">Send it with AirDrop, Quick Share, text, email or any messaging app. Inside is a player page, so it opens in any browser even without the app.</p>
+      </div>
+      <div class="panel view" style="gap:12px">
+        <h3 class="eyebrow">Open one you received</h3>
+        <label class="drop" id="hmuDrop" for="hmuFile"><strong>Choose a Hit Me Up file</strong><span>or drop it here (.hitmeup or .zip)</span></label>
+        <input id="hmuFile" type="file" accept=".hitmeup,.zip,application/zip" hidden>
+        <p class="status" id="hmuOpenStatus" role="status"></p>
+        <h3 class="eyebrow" style="margin-top:6px">Your library</h3>
+        <div class="snip-list" id="hmuLib"></div>
+      </div>
+    </div>
+    <div id="hmuStageWrap" class="epk-frame" hidden>
+      <div class="epk-bar"><span class="eyebrow" id="hmuStageLabel">Now viewing</span><button class="btn small" id="hmuClose" type="button">Close player</button></div>
+      <div id="hmuStage"></div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script id="hmu-player">
+/* Hit Me Up player v1 - shared by the app and by player.html inside every .hitmeup file */
+(function(){
+var CSS = `
+.hmu{--h-bg:#101114;--h-card:#191b20;--h-ink:#f1f2f4;--h-mute:#9ea3ad;--h-acc:#f0a14a;--h-line:#2a2d34;--h-disp:"Big Shoulders Display",Impact,"Arial Narrow",sans-serif;--h-dw:800;--h-up:uppercase;
+  background:var(--h-bg);color:var(--h-ink);font:15px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;position:relative}
+.hmu *{box-sizing:border-box}
+.hmu .h-in{max-width:760px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.hmu .h-hero{display:grid;grid-template-columns:132px minmax(0,1fr);gap:20px;align-items:end;padding:32px 0 22px}
+.hmu .h-photo{width:132px;aspect-ratio:1;max-width:100%;border-radius:50%;overflow:hidden;display:grid;place-items:center;background:linear-gradient(150deg,var(--h-acc),var(--h-line));font:800 44px var(--h-disp);color:var(--h-bg);border:3px solid var(--h-acc)}
+.hmu .h-photo img{width:100%;height:100%;object-fit:cover}
+.hmu .h-kick{font:500 11px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--h-acc)}
+.hmu h1{font-family:var(--h-disp);font-weight:var(--h-dw);text-transform:var(--h-up);font-size:clamp(38px,8vw,64px);line-height:.95;margin:8px 0 6px;text-wrap:balance}
+.hmu .h-sub{color:var(--h-mute);margin:0;max-width:56ch}
+.hmu .h-ctas{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:20px}
+.hmu .h-cta{padding:10px 18px;border-radius:999px;background:var(--h-acc);color:var(--h-bg);font-weight:600;text-decoration:none;border:1px solid var(--h-acc)}
+.hmu .h-cta.alt{background:transparent;color:var(--h-ink);border-color:var(--h-line)}
+.hmu .h-tabs{display:flex;gap:2px;border-bottom:1px solid var(--h-line);overflow-x:auto;scrollbar-width:none}
+.hmu .h-tab{background:none;border:0;border-bottom:3px solid transparent;color:var(--h-mute);padding:12px 14px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.hmu .h-tab[aria-selected="true"]{color:var(--h-ink);border-bottom-color:var(--h-acc)}
+.hmu .h-panel{padding:22px 0 34px;display:grid;gap:22px}
+.hmu .h-rel{display:grid;grid-template-columns:96px minmax(0,1fr);gap:16px;padding:14px;background:var(--h-card);border-radius:8px}
+.hmu .h-cover{width:96px;aspect-ratio:1;max-width:100%;border-radius:4px;overflow:hidden;display:grid;place-items:center;font:800 28px var(--h-disp);color:#fff;background:linear-gradient(135deg,#3a2a55,var(--h-acc))}
+.hmu .h-cover img{width:100%;height:100%;object-fit:cover}
+.hmu h2{font-family:var(--h-disp);font-weight:var(--h-dw);text-transform:var(--h-up);font-size:22px;margin:0;line-height:1.1}
+.hmu h3{font-size:17px;margin:0;line-height:1.2}
+.hmu .h-meta{color:var(--h-mute);font-size:13px;margin:2px 0 8px}
+.hmu .h-trk{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--h-line);font-size:14px}
+.hmu .h-trk .n{font:500 12px "IBM Plex Mono",monospace;color:var(--h-mute);font-variant-numeric:tabular-nums}
+.hmu .h-trk.now{color:var(--h-acc)}
+.hmu .h-play{width:32px;height:32px;border-radius:50%;border:1px solid var(--h-acc);background:transparent;color:var(--h-acc);cursor:pointer;display:grid;place-items:center;padding:0}
+.hmu .h-play svg{width:12px;height:12px;fill:currentColor}
+.hmu .h-pill{font:500 11px "IBM Plex Mono",monospace;color:var(--h-mute)}
+.hmu .h-links{display:flex;flex-wrap:wrap;gap:8px}
+.hmu .h-links a,.hmu .h-btn{padding:8px 14px;border:1px solid var(--h-line);border-radius:999px;color:var(--h-ink);text-decoration:none;font-size:14px;background:transparent;cursor:pointer;font-family:inherit}
+.hmu .h-vid{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px;background:var(--h-card);border-radius:8px;color:var(--h-ink);text-decoration:none}
+.hmu .h-vid small{display:block;color:var(--h-mute)}
+.hmu .h-vid b{color:var(--h-acc);font-size:13px;white-space:nowrap}
+.hmu .h-bio{white-space:pre-wrap;max-width:66ch;margin:0}
+.hmu ul.h-hl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.hmu ul.h-hl li{padding-left:18px;position:relative}
+.hmu ul.h-hl li::before{content:"";position:absolute;left:0;top:.72em;width:8px;height:2px;background:var(--h-acc)}
+.hmu .h-card{background:var(--h-card);border-radius:8px;padding:16px;display:grid;gap:10px}
+.hmu .h-kv{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center}
+.hmu .h-kv span{font-family:"IBM Plex Mono",monospace;font-size:14px;word-break:break-all}
+.hmu .h-bar{position:sticky;bottom:0;z-index:3;background:var(--h-card);border-top:1px solid var(--h-line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.hmu .h-bar .h-in{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;padding-top:10px;padding-bottom:10px}
+.hmu .h-bar .h-cover{width:44px;font-size:14px}
+.hmu .h-np{min-width:0}
+.hmu .h-np b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hmu .h-np small{color:var(--h-mute);font-variant-numeric:tabular-nums}
+.hmu .h-prog{height:4px;background:var(--h-line);border-radius:2px;margin-top:6px;cursor:pointer;position:relative}
+.hmu .h-prog i{position:absolute;inset:0 auto 0 0;background:var(--h-acc);border-radius:2px;width:0}
+.hmu .h-ctl{display:flex;gap:6px;align-items:center}
+.hmu .h-ctl button{width:38px;height:38px;border-radius:50%;border:1px solid var(--h-line);background:transparent;color:var(--h-ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.hmu .h-ctl button.main{background:var(--h-acc);border-color:var(--h-acc);color:var(--h-bg);width:44px;height:44px}
+.hmu .h-ctl svg{width:14px;height:14px;fill:currentColor}
+.hmu .h-empty{color:var(--h-mute);padding:16px;border:1px dashed var(--h-line);border-radius:8px}
+.hmu .h-foot{color:var(--h-mute);font-size:12px;padding:0 0 24px}
+.hmu :focus-visible{outline:2px solid var(--h-acc);outline-offset:2px}
+@media (max-width:520px){.hmu .h-hero{grid-template-columns:88px minmax(0,1fr);gap:14px}.hmu .h-photo{width:88px;font-size:30px}.hmu .h-rel{grid-template-columns:64px minmax(0,1fr)}.hmu .h-cover{width:64px}}
+.hmu.t-clean{--h-bg:#ffffff;--h-card:#f3f4f6;--h-ink:#111;--h-mute:#5b6070;--h-acc:#2b59c3;--h-line:#e1e3e8;--h-disp:"IBM Plex Sans",system-ui,sans-serif;--h-dw:600;--h-up:none}
+.hmu.t-luxury{--h-bg:#0e0c0a;--h-card:#18150f;--h-ink:#f1ebe0;--h-mute:#a99f8e;--h-acc:#c9a45c;--h-line:#2e2922;--h-disp:"Cormorant Garamond",Georgia,serif;--h-dw:700;--h-up:none}
+.hmu.t-street{--h-bg:#f1f0ec;--h-card:#e4e2db;--h-ink:#0d0d0d;--h-mute:#4a4a4a;--h-acc:#e0261b;--h-line:#cfcdc6;--h-disp:"Anton",Impact,sans-serif;--h-dw:400}
+.hmu.t-dark{--h-acc:#8f6bff}
+.hmu.t-minimal{--h-bg:#fafafa;--h-card:#f0f0f0;--h-ink:#1d1d1d;--h-mute:#6d6d6d;--h-acc:#1d1d1d;--h-line:#e3e3e3;--h-disp:"IBM Plex Sans",system-ui,sans-serif;--h-dw:400;--h-up:none}
+.hmu.t-futuristic{--h-bg:#05070d;--h-card:#0b111b;--h-ink:#dff6ff;--h-mute:#7b93a3;--h-acc:#35dcff;--h-line:#14222e;--h-disp:"Orbitron",sans-serif}
+.hmu.t-energy{--h-bg:#121012;--h-card:#1d181c;--h-ink:#fff;--h-mute:#b9adb8;--h-acc:#ff2e63;--h-line:#2e252d;--h-disp:"Anton",Impact,sans-serif;--h-dw:400}
+`;
+var ICON = {play:'<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg>', pause:'<svg viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z"/></svg>',
+  prev:'<svg viewBox="0 0 12 12"><path d="M1 1h2v10H1zM11 1L4 6l7 5z"/></svg>', next:'<svg viewBox="0 0 12 12"><path d="M9 1h2v10H9zM1 1l7 5-7 5z"/></svg>'};
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+function fmt(t){ t = Math.max(0, t || 0); var m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + (s < 10 ? "0" : "") + s; }
+function initials(n){ return String(n || "?").split(/\s+/).map(function(w){ return w[0] || ""; }).join("").slice(0, 2).toUpperCase(); }
+
+function htmlEngine(){
+  var a = new Audio(), endCb = function(){}; a.preload = "auto"; a.onended = function(){ endCb(); };
+  return { play:function(p){ a.src = p; return a.play(); }, toggle:function(){ a.paused ? a.play() : a.pause(); }, stop:function(){ a.pause(); },
+    state:function(){ return {t:a.currentTime || 0, d:isFinite(a.duration) ? a.duration : 0, playing:!a.paused}; },
+    seek:function(f){ if (a.duration) a.currentTime = f * a.duration; }, onEnd:function(cb){ endCb = cb; } };
+}
+function bufferEngine(getBuffer){
+  var ctx, src, buf, startedAt = 0, offset = 0, playing = false, endCb = function(){}, token = 0;
+  function C(){ return ctx || (ctx = new (window.AudioContext || window.webkitAudioContext)()); }
+  function kill(){ if (src){ src.onended = null; try { src.stop(); } catch(e){} src = null; } }
+  function startAt(off){ kill(); var c = C(); src = c.createBufferSource(); src.buffer = buf; src.connect(c.destination);
+    src.onended = function(){ if (playing){ playing = false; offset = 0; endCb(); } }; src.start(0, off); startedAt = c.currentTime - off; playing = true; }
+  return {
+    play:function(p){ var my = ++token; C().resume(); return Promise.resolve(getBuffer(p)).then(function(b){ if (my !== token || !b) return; buf = b; startAt(0); }); },
+    toggle:function(){ if (!buf) return; if (playing){ offset = C().currentTime - startedAt; playing = false; kill(); } else startAt(offset); },
+    stop:function(){ token++; kill(); playing = false; offset = 0; },
+    state:function(){ if (!buf) return {t:0, d:0, playing:false}; var t = playing ? C().currentTime - startedAt : offset; return {t:Math.min(t, buf.duration), d:buf.duration, playing:playing}; },
+    seek:function(f){ if (!buf) return; var off = f * buf.duration; if (playing) startAt(off); else offset = off; },
+    onEnd:function(cb){ endCb = cb; }
+  };
+}
+
+function mount(root, M, media){
+  if (!document.getElementById("hmu-css")){ var st = document.createElement("style"); st.id = "hmu-css"; st.textContent = CSS; document.head.appendChild(st); }
+  if (root._hmuStop) root._hmuStop();
+  var img = media.img || function(p){ return p; }, eng = media.engine || htmlEngine();
+  var a = M.artist || {}, L = M.links || {}, rels = M.releases || [], tab = "music";
+  var queue = []; rels.forEach(function(r, ri){ (r.tracks || []).forEach(function(t, ti){ if (t.snippet) queue.push({r:r, t:t, key:ri + "-" + ti}); }); });
+  var cur = -1;
+  function cover(r, cls){ var p = r && r.cover ? img(r.cover) : ""; return '<div class="' + cls + '">' + (p ? '<img src="' + esc(p) + '" alt="">' : esc(initials(r ? r.title : a.name))) + '</div>'; }
+  function ctas(){ return (M.cta || []).map(function(c, i){ var ext = /^https?:/.test(c.href);
+    return '<a class="h-cta' + (i ? ' alt' : '') + '" href="' + esc(c.href) + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + esc(c.label) + '</a>'; }).join(""); }
+  function linkRow(arr){ return (arr || []).map(function(l){ return '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.label || l.plat) + '</a>'; }).join(""); }
+  function panel(){
+    if (tab === "music"){
+      var out = rels.length ? rels.map(function(r, ri){
+        return '<div class="h-rel">' + cover(r, "h-cover") + '<div style="min-width:0"><h2>' + esc(r.title) + '</h2><p class="h-meta">' + esc(r.type) + (r.year ? ' · ' + esc(r.year) : '') + '</p>' +
+          (r.tracks || []).map(function(t, ti){ var k = ri + "-" + ti, qi = queue.findIndex(function(q){ return q.key === k; });
+            return '<div class="h-trk' + (qi === cur && qi > -1 ? ' now' : '') + '"><span class="n">' + (ti < 9 ? '0' : '') + (ti + 1) + '</span><span>' + esc(t.title) + '</span>' +
+              (qi > -1 ? '<button class="h-play" type="button" data-q="' + qi + '" aria-label="Play 1:30 of ' + esc(t.title) + '">' + (qi === cur && eng.state().playing ? ICON.pause : ICON.play) + '</button>' : '<span class="h-pill">—</span>') + '</div>';
+          }).join("") + '</div></div>'; }).join("") : '<p class="h-empty">No releases in this Hit Me Up yet.</p>';
+      return out + ((L.music || []).length ? '<div><p class="h-kick" style="margin:0 0 10px">Listen in full</p><div class="h-links">' + linkRow(L.music) + '</div></div>' : '');
+    }
+    if (tab === "videos") return (L.videos || []).length ? (L.videos || []).map(function(v){
+      return '<a class="h-vid" href="' + esc(v.url) + '" target="_blank" rel="noopener"><span style="min-width:0"><h3>' + esc(v.label || "Video") + '</h3><small>' + esc(v.plat) + '</small></span><b>Watch ↗</b></a>'; }).join("") : '<p class="h-empty">No videos in this Hit Me Up.</p>';
+    if (tab === "about") return (a.bio ? '<p class="h-bio">' + esc(a.bio) + '</p>' : '') +
+      ((M.highlights || []).length ? '<div><h2 style="margin-bottom:12px">Highlights</h2><ul class="h-hl">' + M.highlights.map(function(h){ return '<li>' + esc(h) + '</li>'; }).join("") + '</ul></div>' : '') +
+      (((L.socials || []).length || M.photosFolder) ? '<div><h2 style="margin-bottom:12px">Follow</h2><div class="h-links">' + linkRow(L.socials) + (M.photosFolder ? '<a href="' + esc(M.photosFolder) + '" target="_blank" rel="noopener">Press photos</a>' : '') + '</div></div>' : '');
+    var c = M.contact || {};
+    return '<div class="h-card"><p class="h-bio">' + esc(c.text || "No contact details included.") + '</p>' +
+      (c.email ? '<div class="h-kv"><span>' + esc(c.email) + '</span><button class="h-btn" type="button" data-copy="' + esc(c.email) + '">Copy email</button></div>' : '') +
+      (c.phone ? '<div class="h-kv"><span>' + esc(c.phone) + '</span><button class="h-btn" type="button" data-copy="' + esc(c.phone) + '">Copy number</button></div>' : '') +
+      (c.vcf && media.contactHref ? '<div><a class="h-cta" href="' + esc(media.contactHref) + '" download>Save contact card</a></div>' : '') + '</div>' +
+      ((M.cta || []).length ? '<div class="h-ctas">' + ctas() + '</div>' : '');
+  }
+  function render(){
+    root.innerHTML = '<div class="hmu t-' + esc((M.look && M.look.theme) || "dark") + '"' + (M.look && M.look.accent ? ' style="--h-acc:' + esc(M.look.accent) + '"' : '') + '>' +
+      '<div class="h-in"><header class="h-hero"><div class="h-photo">' + (a.photo ? '<img src="' + esc(img(a.photo)) + '" alt="' + esc(a.name) + '">' : esc(initials(a.name))) + '</div>' +
+      '<div style="min-width:0"><div class="h-kick">Hit Me Up</div><h1>' + esc(a.name || "Artist") + '</h1><p class="h-sub">' + esc(a.tagline || "") + '</p></div></header>' +
+      '<div class="h-ctas">' + ctas() + '</div>' +
+      '<div class="h-tabs" role="tablist">' + [["music","Music"],["videos","Videos"],["about","About"],["contact","Contact"]].map(function(x){
+        return '<button class="h-tab" role="tab" type="button" data-tab="' + x[0] + '" aria-selected="' + (tab === x[0]) + '">' + x[1] + '</button>'; }).join("") + '</div>' +
+      '<div class="h-panel" role="tabpanel">' + panel() + '</div>' +
+      '<p class="h-foot">Hit Me Up · made with EPK Studio' + (M.created ? ' · ' + esc(String(M.created).slice(0, 10)) : '') + '</p></div>' +
+      '<div class="h-bar"' + (queue.length ? '' : ' hidden') + '><div class="h-in">' + cover(cur > -1 ? queue[cur].r : rels[0], "h-cover") +
+      '<div class="h-np"><b>' + esc(cur > -1 ? queue[cur].t.title : "1:30 previews") + '</b><small data-time>' + (cur > -1 ? esc(queue[cur].r.title) : queue.length + ' snippet' + (queue.length === 1 ? '' : 's') + ' · tap play') + '</small><div class="h-prog" data-prog><i></i></div></div>' +
+      '<div class="h-ctl"><button type="button" data-ctl="prev" aria-label="Previous">' + ICON.prev + '</button><button type="button" class="main" data-ctl="play" aria-label="Play or pause">' + (eng.state().playing ? ICON.pause : ICON.play) + '</button><button type="button" data-ctl="next" aria-label="Next">' + ICON.next + '</button></div></div></div></div>';
+  }
+  function go(i){ if (!queue.length) return; cur = (i + queue.length) % queue.length; render();
+    var p = eng.play(queue[cur].t.snippet); if (p && p.then) p.then(render, function(){ render(); }); }
+  eng.onEnd(function(){ if (cur < queue.length - 1) go(cur + 1); else render(); });
+  root.onclick = function(e){
+    var t = e.target.closest("[data-tab],[data-q],[data-ctl],[data-copy],[data-prog]"); if (!t) return;
+    if (t.dataset.tab){ tab = t.dataset.tab; render(); }
+    else if (t.dataset.q){ var q = +t.dataset.q; if (q === cur){ eng.toggle(); render(); } else go(q); }
+    else if (t.dataset.ctl === "play"){ if (cur < 0) go(0); else { eng.toggle(); render(); } }
+    else if (t.dataset.ctl === "next") go(cur + 1);
+    else if (t.dataset.ctl === "prev") go(cur - 1);
+    else if (t.hasAttribute("data-prog")){ var r = t.getBoundingClientRect(); eng.seek((e.clientX - r.left) / r.width); }
+    else if (t.dataset.copy){ var v = t.dataset.copy, o = t.textContent;
+      try { navigator.clipboard.writeText(v).then(function(){ t.textContent = "Copied"; setTimeout(function(){ t.textContent = o; }, 1400); }, function(){}); } catch(err){} }
+  };
+  var iv = setInterval(function(){ var s = eng.state(), bar = root.querySelector("[data-prog] i"), tm = root.querySelector("[data-time]");
+    if (cur > -1 && bar && s.d){ bar.style.width = (s.t / s.d * 100) + "%"; if (tm) tm.textContent = fmt(s.t) + " / " + fmt(s.d) + " · " + queue[cur].r.title; } }, 250);
+  root._hmuStop = function(){ clearInterval(iv); eng.stop(); };
+  render();
+}
+window.HMUPlayer = {mount:mount, htmlEngine:htmlEngine, bufferEngine:bufferEngine};
+})();
+</script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Math.random().toString(36).slice(2, 9);
+const fmt = t => { t = Math.max(0, t); const m = Math.floor(t / 60), s = Math.floor(t % 60); return m + ":" + String(s).padStart(2, "0"); };
+const SNIP = 90;
+const cap = async n => { try { return (await window.claude?.use?.(n)) ?? null; } catch(e){ return null; } };
+/* ---------- platform: claude.ai page vs installed app ---------- */
+const HOSTED = !(window.claude && typeof window.claude.use === "function");
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+// Save a file. Installed app: real download. claude.ai: the platform's save prompt (some types must be zipped there).
+async function saveOut(filename, data, type){
+  if (HOSTED){
+    const blob = data instanceof Blob ? data : new Blob([data], {type:type || "application/octet-stream"});
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000); return "saved";
+  }
+  const dl = await cap("downloads");
+  if (!dl) throw {code:"unavailable", message:"Saving files isn't available in this view."};
+  await dl.save({filename, data}); return "saved";
+}
+// Share sheet (AirDrop, Quick Share, Messages, email…). Returns a File the device accepts, or null.
+function shareable(blob, names, type){
+  if (!HOSTED || !navigator.canShare) return null;
+  for (const n of names){ try { const f = new File([blob], n, {type}); if (navigator.canShare({files:[f]})) return f; } catch(e){} }
+  return null;
+}
+async function shareOut(file, title){
+  try { await navigator.share({files:[file], title}); return "shared"; }
+  catch(e){ if (e && e.name === "AbortError") return "cancelled"; throw e; }
+}
+/* ---------- media store: keeps song files and snippets between visits ---------- */
+const media = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => { try {
+    const r = indexedDB.open("epk-studio-media", 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore("audio"); r.result.createObjectStore("snips"); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e){ rej(e); } }));
+  const run = (store, mode, fn) => open().then(db => new Promise(res => { const tx = db.transaction(store, mode), q = fn(tx.objectStore(store));
+    tx.oncomplete = () => res(q && q.result); tx.onerror = () => res(null); tx.onabort = () => res(null); })).catch(() => null);
+  return {
+    put:(store, key, val) => run(store, "readwrite", s => s.put(val, key)),
+    get:(store, key) => run(store, "readonly", s => s.get(key)),
+    del:(store, key) => run(store, "readwrite", s => s.delete(key)),
+    clear:() => Promise.all(["audio","snips"].map(st => run(st, "readwrite", s => s.clear())))
+  };
+})();
+const KEY = "epk-studio-v1";
+
+/* ---------- questions ---------- */
+const Q = [
+  {k:"name", t:"Artist / Stage Name", type:"short", req:true},
+  {k:"bio", t:"Artist Bio", type:"para", req:true, h:"If you don't already have a professional bio, tell us where you're from, how long you've been making music, how you describe your sound, and what makes you different."},
+  {k:"photos", t:"Artist Photo Folder Link", type:"short", req:true, h:"Provide a shareable folder with your main photo and 2–5 additional high-quality photos.", ph:"https://drive.google.com/…"},
+  {k:"mainLink", t:"Main Music Link", type:"short", req:true, ph:"https://open.spotify.com/…"},
+  {k:"moreLinks", t:"Additional Music / Video Links", type:"para", h:"Add any additional songs, videos, or projects you want included. One link per line; text after the link becomes its label."},
+  {k:"socials", t:"Social Media Links", type:"para", req:true, h:"Include Instagram, TikTok, YouTube, Spotify, Apple Music, or other important profiles."},
+  {k:"highlights", t:"Career Highlights", type:"para", h:"Shows, festivals, opening slots, collaborations, press, radio, awards, streaming milestones, etc. One per line."},
+  {k:"contact", t:"Booking / Business Contact Information", type:"para", req:true, h:"Include contact name, email, and phone if applicable."},
+  {k:"style", t:"What style or look do you want for your EPK?", type:"para", req:true, h:"Include colors, overall vibe, or words such as clean, luxury, street, dark, minimal, futuristic, high-energy, etc."},
+  {k:"cta", t:"What do you want someone to do after viewing your EPK?", type:"multi", req:true},
+];
+const CTAS = [["book","Book me for a performance"],["business","Contact me for business"],["listen","Listen to my music"],["watch","Watch my videos"],["management","Contact my management"],["other","Other"]];
+
+const EXAMPLE = {
+  isExample:true,
+  intake:{
+    name:"Nova Reign",
+    bio:"Nova Reign is a Detroit-born singer and producer who has been making music since she was 14, recording vocals in her grandmother's basement over beats she built on a borrowed laptop. Her sound sits between late-night R&B and Detroit house: warm vocals, heavy low end and drums that keep moving. What sets her apart is that she writes, produces and mixes every record herself, then performs it live with a looper and a drum pad.",
+    photos:"https://drive.google.com/drive/folders/example-nova-press-photos",
+    mainLink:"https://open.spotify.com/artist/example-nova-reign",
+    moreLinks:"https://www.youtube.com/watch?v=example001 Midnight Signal (Official Video)\nhttps://www.youtube.com/watch?v=example002 Static Hearts (Live Session)\nhttps://soundcloud.com/example-nova/late-shift-demo Late Shift (demo)",
+    socials:"https://instagram.com/example.novareign\nhttps://tiktok.com/@example.novareign\nhttps://youtube.com/@example-novareign\nhttps://music.apple.com/artist/example-nova-reign",
+    highlights:"Opened for a national R&B tour stop at The Fillmore Detroit (2025)\n\"Midnight Signal\" passed 400,000 streams in its first six months\nFeatured on local public radio's New Music Friday\nHeadlined a Movement Festival after-party showcase",
+    contact:"Dana Brooks, Management\ndana@example.com\n(313) 555-0142",
+    style:"Dark and luxury. Black and gold, clean type, feels high-end but still has an edge.",
+    cta:["book","listen"], ctaOther:""
+  },
+  releases:[
+    {id:"r1", type:"album", title:"After Hours Frequency", year:"2026", cover:"", tracks:[
+      {id:"t1", title:"Intro (Dial Tone)", dur:0},{id:"t2", title:"Midnight Signal", dur:0},{id:"t3", title:"Static Hearts", dur:0},{id:"t4", title:"Woodward at 3AM", dur:0}]},
+    {id:"r2", type:"single", title:"Late Shift", year:"2025", cover:"", tracks:[{id:"t5", title:"Late Shift", dur:0}]}
+  ],
+  photo:"", epkUrl:"", styleOv:"auto", snippets:[]
+};
+const BLANK = () => ({isExample:false, intake:{name:"",bio:"",photos:"",mainLink:"",moreLinks:"",socials:"",highlights:"",contact:"",style:"",cta:[],ctaOther:""}, releases:[], photo:"", epkUrl:"", styleOv:"auto", snippets:[]});
+
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)); } catch(e) {}
+if (!S || !S.intake) S = JSON.parse(JSON.stringify(EXAMPLE));
+S.snippets = S.snippets || [];
+const AUDIO = new Map();      // trackId -> AudioBuffer
+const SNIPS = new Map();      // snippetId -> {blob, dataUrl, buffer}
+// snippet audio is restored from the media store after load (restoreMedia); entries without audio are dropped there
+
+let saveT;
+function saveNow(){ clearTimeout(saveT); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+function save(){ clearTimeout(saveT); saveT = setTimeout(saveNow, 300); }
+addEventListener("pagehide", saveNow);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveNow(); });
+
+/* ---------- link parsing ---------- */
+const PLAT = [
+  [/instagram\.com/i,"Instagram"],[/tiktok\.com/i,"TikTok"],[/(youtube\.com|youtu\.be)/i,"YouTube"],[/spotify\.com/i,"Spotify"],
+  [/music\.apple\.com|itunes\.apple/i,"Apple Music"],[/soundcloud\.com/i,"SoundCloud"],[/bandcamp\.com/i,"Bandcamp"],[/(twitter\.com|x\.com)/i,"X"],
+  [/facebook\.com/i,"Facebook"],[/audiomack\.com/i,"Audiomack"],[/tidal\.com/i,"TIDAL"],[/deezer\.com/i,"Deezer"],[/music\.amazon/i,"Amazon Music"],
+  [/vimeo\.com/i,"Vimeo"],[/linktr\.ee/i,"Linktree"],[/twitch\.tv/i,"Twitch"],[/drive\.google|dropbox\.com/i,"Folder"]
+];
+const platOf = u => (PLAT.find(([r]) => r.test(u)) || [0,"Website"])[1];
+function parseLinks(text){
+  const out = [];
+  String(text||"").split(/\n+/).forEach(line => {
+    const m = line.match(/((?:https?:\/\/)?(?:[\w-]+\.)+[a-z]{2,}(?:\/[^\s,]*)?)/i);
+    if (!m) return;
+    let url = m[1]; if (!/^https?:/i.test(url)) url = "https://" + url;
+    const label = line.replace(m[1], "").replace(/^[\s\-–:|]+|[\s\-–:|]+$/g, "");
+    out.push({url, label, plat:platOf(url)});
+  });
+  return out;
+}
+const isVideo = l => /youtube\.com\/watch|youtu\.be\/|vimeo\.com\/\d|tiktok\.com\/.+\/video/i.test(l.url);
+function contactBits(t){
+  const email = (String(t).match(/[\w.+-]+@[\w-]+\.[\w.]+/)||[])[0] || "";
+  const phone = (String(t).match(/\+?\(?\d[\d\s().-]{7,}\d/)||[])[0] || "";
+  return {email, phone};
+}
+
+/* ---------- meter ---------- */
+const REQ = Q.filter(q => q.req);
+function filled(q){ const v = S.intake[q.k]; return q.type === "multi" ? (v && v.length) : String(v||"").trim().length > 1; }
+function meter(){
+  const n = REQ.filter(filled).length, total = REQ.length;
+  const leds = $("#leds"); const cells = 12;
+  leds.innerHTML = "";
+  for (let i = 0; i < cells; i++){
+    const on = i < Math.round(n / total * cells);
+    const d = document.createElement("span");
+    d.className = "led" + (on ? " on" : "") + (i >= 8 ? " hi" : "") + (i >= 11 ? " top" : "");
+    leds.appendChild(d);
+  }
+  $("#meterTxt").textContent = n + " / " + total + " required";
+}
+
+/* ---------- intake form ---------- */
+function renderIntake(){
+  const f = $("#intakeForm");
+  f.innerHTML = Q.map((q, i) => {
+    const id = "q_" + q.k, v = S.intake[q.k];
+    let field;
+    if (q.type === "short") field = `<input type="text" id="${id}" data-k="${q.k}" value="${esc(v)}" placeholder="${esc(q.ph||"")}">`;
+    else if (q.type === "para") field = `<textarea id="${id}" data-k="${q.k}" rows="${q.k==="bio"?6:4}">${esc(v)}</textarea>`;
+    else field = `<div class="chips" role="group" aria-labelledby="lbl_${q.k}">${CTAS.map(([val, lab]) =>
+        `<label class="chip"><input type="checkbox" id="cta_${val}" value="${val}" ${(v||[]).includes(val)?"checked":""}> ${lab}</label>`).join("")}</div>
+        <input type="text" id="ctaOther" placeholder="Describe your other goal" value="${esc(S.intake.ctaOther)}" style="margin-top:10px" ${(v||[]).includes("other")?"":"hidden"}>`;
+    return `<div class="q">
+      <div class="qn">${String(i+1).padStart(2,"0")}</div>
+      <label class="qt" id="lbl_${q.k}" ${q.type!=="multi"?`for="${id}"`:""}>${esc(q.t)}
+        <span class="tag ${q.req?"req":""}" data-tag="${q.k}">${q.req?"Required":"Optional"}</span></label>
+      <div class="body">${q.h?`<p class="hint">${esc(q.h)}</p>`:""}${field}<div class="detected" data-det="${q.k}"></div></div>
+    </div>`;
+  }).join("");
+  f.querySelectorAll("[data-k]").forEach(el => el.addEventListener("input", () => { S.intake[el.dataset.k] = el.value; changed(el.dataset.k); }));
+  f.querySelectorAll(".chips input").forEach(el => el.addEventListener("change", () => {
+    S.intake.cta = [...f.querySelectorAll(".chips input:checked")].map(x => x.value);
+    $("#ctaOther").hidden = !S.intake.cta.includes("other"); changed("cta");
+  }));
+  $("#ctaOther").addEventListener("input", e => { S.intake.ctaOther = e.target.value; changed("cta"); });
+  Q.forEach(q => tagState(q)); ["moreLinks","socials","mainLink","contact","style"].forEach(detect);
+}
+function tagState(q){
+  const t = document.querySelector(`[data-tag="${q.k}"]`); if (!t) return;
+  const ok = filled(q);
+  t.className = "tag " + (ok ? "done" : q.req ? "req" : "");
+  t.textContent = ok ? "Done" : q.req ? "Required" : "Optional";
+}
+function detect(k){
+  const box = document.querySelector(`[data-det="${k}"]`); if (!box) return;
+  const v = S.intake[k]; let chips = [];
+  if (k === "moreLinks" || k === "socials" || k === "mainLink") chips = parseLinks(v).map(l => (isVideo(l) ? "Video · " : "") + l.plat);
+  if (k === "contact"){ const c = contactBits(v); if (c.email) chips.push("Email found"); if (c.phone) chips.push("Phone found"); }
+  if (k === "style"){ const st = lookFrom(v); chips.push("Look: " + LOOKS[st.look].name); if (st.accent) chips.push("Accent color: " + st.accentName); }
+  box.innerHTML = chips.map(c => `<span class="det">${esc(c)}</span>`).join("");
+}
+function changed(k){
+  if (S.isExample){ S.isExample = false; $("#exampleBanner").hidden = true; }
+  const q = Q.find(x => x.k === k); if (q) tagState(q);
+  detect(k); meter(); save();
+}
+
+/* ---------- looks ---------- */
+const LOOKS = {
+  clean:{name:"Clean", words:["clean","simple","fresh","bright","professional","crisp"]},
+  luxury:{name:"Luxury", words:["luxury","luxurious","elegant","high-end","premium","gold","classy","upscale"]},
+  street:{name:"Street", words:["street","raw","grit","gritty","urban","bold","underground","hip hop","hip-hop","grunge"]},
+  dark:{name:"Dark", words:["dark","moody","night","black","noir","shadow","mysterious"]},
+  minimal:{name:"Minimal", words:["minimal","minimalist","understated","quiet","calm"]},
+  futuristic:{name:"Futuristic", words:["futuristic","future","cyber","neon","tech","space","sci-fi","electronic","digital"]},
+  energy:{name:"High-energy", words:["high-energy","high energy","energetic","loud","vibrant","hype","explosive","colorful","colourful"]}
+};
+const COLORS = {red:"#e0322b",crimson:"#c8102e",orange:"#ff7a1a",gold:"#c9a45c",yellow:"#ffd23f",green:"#2fbf71",teal:"#1fb5ac",blue:"#2f6bff",navy:"#1f3a7a",purple:"#8f6bff",violet:"#8f6bff",pink:"#ff4f9a",magenta:"#e0249a",silver:"#b8bec7",white:"#ffffff",cyan:"#35dcff",brown:"#9b6b43"};
+function lookFrom(text){
+  const t = String(text||"").toLowerCase(); let best = "clean", score = 0;
+  for (const [k, L] of Object.entries(LOOKS)){
+    const s = L.words.reduce((a, w) => a + (t.includes(w) ? (t.indexOf(w) < 40 ? 2 : 1) : 0), 0);
+    if (s > score){ score = s; best = k; }
+  }
+  // luxury + dark together reads best as luxury
+  let accent = "", accentName = "";
+  for (const [n, hex] of Object.entries(COLORS)){ if (new RegExp("\\b" + n + "\\b").test(t) && n !== "white"){ accent = hex; accentName = n; break; } }
+  return {look:best, accent, accentName};
+}
+
+/* ---------- releases ---------- */
+function coverHTML(r, cls = "cover"){
+  const init = (r.title || "?").split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return `<div class="${cls}">${r.cover ? `<img src="${r.cover}" alt="${esc(r.title)} cover">` : esc(init)}</div>`;
+}
+function renderReleases(){
+  const L = $("#relList");
+  if (!S.releases.length){ L.innerHTML = `<div class="empty">No releases yet. Add an album, EP or single to start your catalog.</div>`; return; }
+  L.innerHTML = S.releases.map(r => `
+    <article class="panel rel" data-r="${r.id}">
+      <div style="display:grid;gap:8px">
+        ${coverHTML(r)}
+        <label class="btn small" for="cov_${r.id}">Cover art</label><input type="file" id="cov_${r.id}" accept="image/*" hidden data-cover="${r.id}">
+      </div>
+      <div>
+        <div class="rel-meta">
+          <div style="grid-column:1/-1"><label class="eyebrow" for="rt_${r.id}">Title</label><input type="text" id="rt_${r.id}" data-rf="title" value="${esc(r.title)}"></div>
+          <div><label class="eyebrow" for="ry_${r.id}">Type</label><select id="ry_${r.id}" data-rf="type">${["album","ep","single"].map(t => `<option value="${t}" ${r.type===t?"selected":""}>${t==="ep"?"EP":t[0].toUpperCase()+t.slice(1)}</option>`).join("")}</select></div>
+          <div><label class="eyebrow" for="rd_${r.id}">Year</label><input type="text" id="rd_${r.id}" data-rf="year" value="${esc(r.year)}" inputmode="numeric"></div>
+        </div>
+        <ol class="tracks">${r.tracks.map((t, i) => `
+          <li data-t="${t.id}">
+            <span class="no">${String(i+1).padStart(2,"0")}</span>
+            <input type="text" id="tt_${t.id}" data-tf="title" value="${esc(t.title)}" aria-label="Track ${i+1} title">
+            <span class="tr-actions">
+              ${AUDIO.has(t.id) ? `<span class="pill ok">${fmt(t.dur)}</span><button class="btn small" type="button" data-cut="${t.id}">Cut snippet</button>` :
+                `<label class="btn small" for="au_${t.id}">Add audio</label><input type="file" id="au_${t.id}" accept="audio/*" hidden data-audio="${t.id}">`}
+              ${S.snippets.some(s => s.trackId === t.id) ? `<span class="pill acc">Snippet</span>` : ""}
+              <button class="btn small" type="button" data-deltr="${t.id}" aria-label="Remove track">✕</button>
+            </span>
+          </li>`).join("")}
+        </ol>
+        <div class="row" style="margin-top:12px">
+          <button class="btn small" type="button" data-addtr="${r.id}">Add track</button>
+          <label class="btn small" for="multi_${r.id}">Add audio files</label><input type="file" id="multi_${r.id}" accept="audio/*" multiple hidden data-multi="${r.id}">
+          <span style="flex:1"></span>
+          <button class="btn small" type="button" data-delrel="${r.id}">Remove release</button>
+        </div>
+      </div>
+    </article>`).join("");
+}
+const relById = id => S.releases.find(r => r.id === id);
+const trackById = id => { for (const r of S.releases){ const t = r.tracks.find(x => x.id === id); if (t) return {r, t}; } return null; };
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.add){ const r = {id:uid(), type:b.dataset.add, title:b.dataset.add==="single"?"New single":"New "+(b.dataset.add==="ep"?"EP":"album"), year:String(new Date().getFullYear()), cover:"", tracks:[{id:uid(), title:"Track 1", dur:0}]}; S.releases.unshift(r); touch(); }
+  else if (b.dataset.addtr){ const r = relById(b.dataset.addtr); r.tracks.push({id:uid(), title:"Track " + (r.tracks.length+1), dur:0}); touch(); }
+  else if (b.dataset.deltr){ const x = trackById(b.dataset.deltr); x.r.tracks = x.r.tracks.filter(t => t !== x.t); forgetTrack(x.t.id); touch(); }
+  else if (b.dataset.delrel){ const r = relById(b.dataset.delrel);
+    if (b.dataset.confirm){ S.releases = S.releases.filter(x => x !== r); r.tracks.forEach(t => forgetTrack(t.id)); touch(); }
+    else { b.dataset.confirm = "1"; b.textContent = "Click again to remove"; setTimeout(() => { if (b.isConnected){ delete b.dataset.confirm; b.textContent = "Remove release"; } }, 3000); } }
+  else if (b.dataset.cut){ curTrack = b.dataset.cut; location.hash = "snippets"; }
+});
+document.addEventListener("input", e => {
+  const el = e.target;
+  if (el.dataset.rf){ const r = relById(el.closest("[data-r]").dataset.r); r[el.dataset.rf] = el.value; touchSoft(); }
+  if (el.dataset.tf){ trackById(el.closest("[data-t]").dataset.t).t.title = el.value; touchSoft(); }
+});
+document.addEventListener("change", async e => {
+  const el = e.target;
+  if (el.dataset.cover && el.files[0]){ relById(el.dataset.cover).cover = await shrinkImage(el.files[0], 500); touch(); }
+  if (el.dataset.audio && el.files[0]){ await attachAudio(el.dataset.audio, el.files[0]); touch(); }
+  if (el.dataset.multi && el.files.length){
+    const r = relById(el.dataset.multi);
+    // fill empty tracks first, then add new ones
+    for (const f of el.files){
+      let t = r.tracks.find(x => !AUDIO.has(x.id) && /^Track \d+$/.test(x.title)) || r.tracks.find(x => !AUDIO.has(x.id));
+      if (!t){ t = {id:uid(), title:"", dur:0}; r.tracks.push(t); }
+      if (!t.title || /^Track \d+$/.test(t.title)) t.title = f.name.replace(/\.[^.]+$/, "");
+      await attachAudio(t.id, f);
+    }
+    touch();
+  }
+});
+function touch(){ if (S.isExample){ S.isExample = false; $("#exampleBanner").hidden = true; } renderReleases(); fillTrackSelect(); save(); }
+function touchSoft(){ if (S.isExample){ S.isExample = false; $("#exampleBanner").hidden = true; } fillTrackSelect(); save(); }
+
+let actx;
+const ac = () => actx || (actx = new (window.AudioContext || window.webkitAudioContext)());
+async function attachAudio(trackId, file){
+  try {
+    const buf = await ac().decodeAudioData(await file.arrayBuffer());
+    AUDIO.set(trackId, buf);
+    const x = trackById(trackId); if (x) x.t.dur = buf.duration;
+    media.put("audio", trackId, file);   // kept on this device so it's here next time
+    return true;
+  } catch(err){ setStatus("#snipStatus", "That file couldn't be read. Try an MP3, WAV or M4A.", "err"); return false; }
+}
+function forgetTrack(id){
+  AUDIO.delete(id); media.del("audio", id);
+  S.snippets.filter(s => s.trackId === id).forEach(s => { SNIPS.delete(s.id); media.del("snips", s.id); });
+  S.snippets = S.snippets.filter(s => s.trackId !== id);
+}
+// Bring back song files and snippets saved on this device
+async function restoreMedia(){
+  const tracks = S.releases.flatMap(r => r.tracks);
+  await Promise.all(tracks.map(async t => {
+    const blob = await media.get("audio", t.id); if (!blob) return;
+    try { const buf = await ac().decodeAudioData(await blob.arrayBuffer()); AUDIO.set(t.id, buf); t.dur = buf.duration; } catch(e){}
+  }));
+  const keep = [];
+  for (const s of S.snippets){
+    const blob = await media.get("snips", s.id);
+    if (!blob || !tracks.some(t => t.id === s.trackId)){ media.del("snips", s.id); continue; }
+    try { const buffer = await ac().decodeAudioData(await blob.arrayBuffer()); SNIPS.set(s.id, {blob, buffer, dataUrl: await blobToDataUrl(blob)}); keep.push(s); } catch(e){}
+  }
+  S.snippets = keep; save();
+}
+function shrinkImage(file, max){
+  return new Promise(res => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => { const s = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas");
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg", .84)); };
+    img.onerror = () => res("");
+    img.src = url;
+  });
+}
+
+/* ---------- snippet cutter ---------- */
+let curTrack = null, startT = 0, playing = null, playStartedAt = 0;
+function fillTrackSelect(){
+  const sel = $("#snipTrack");
+  const opts = [];
+  S.releases.forEach(r => r.tracks.forEach(t => opts.push(`<option value="${t.id}" ${AUDIO.has(t.id)?"":"disabled"}>${esc(t.title||"Untitled")} — ${esc(r.title)}${AUDIO.has(t.id)?"":" (no audio)"}</option>`)));
+  sel.innerHTML = `<option value="">Choose a track…</option>` + opts.join("");
+  if (curTrack && AUDIO.has(curTrack)) sel.value = curTrack;
+}
+$("#snipTrack").addEventListener("change", e => { curTrack = e.target.value || null; startT = 0; loadEditor(); });
+$("#snipFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = {id:uid(), type:"single", title:f.name.replace(/\.[^.]+$/, ""), year:String(new Date().getFullYear()), cover:"", tracks:[{id:uid(), title:f.name.replace(/\.[^.]+$/, ""), dur:0}]};
+  if (await attachAudio(r.tracks[0].id, f)){ S.releases.unshift(r); curTrack = r.tracks[0].id; startT = 0; touch(); loadEditor(); }
+  e.target.value = "";
+});
+$("#demoBeat").addEventListener("click", async () => {
+  const btn = $("#demoBeat"); btn.disabled = true; setStatus("#snipStatus", "Building demo beat…");
+  try {
+    const sr = 44100, bpm = 92, beat = 60 / bpm, beats = 32, loopLen = beats * beat;
+    const bassNotes = [41.2, 41.2, 49, 55, 36.7, 36.7, 49, 46.2];
+    // render one 8-bar loop with bass and one without, then tile them into a 2:30 track
+    const renderLoop = async withBass => {
+      const oc = new OfflineAudioContext(2, Math.ceil(sr * loopLen), sr);
+      const master = oc.createGain(); master.gain.value = .6; master.connect(oc.destination);
+      const noise = oc.createBuffer(1, sr * .2, sr); const nd = noise.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      for (let i = 0; i < beats; i++){
+        const t = i * beat;
+        if (i % 4 !== 2){ const k = oc.createOscillator(), kg = oc.createGain(); k.frequency.setValueAtTime(140, t); k.frequency.exponentialRampToValueAtTime(45, t + .12);
+          kg.gain.setValueAtTime(1, t); kg.gain.exponentialRampToValueAtTime(.001, t + .35); k.connect(kg).connect(master); k.start(t); k.stop(t + .4); }
+        if (i % 4 === 1 || i % 4 === 3){ const s = oc.createBufferSource(), f = oc.createBiquadFilter(), g = oc.createGain(); s.buffer = noise; f.type = "bandpass"; f.frequency.value = 1800;
+          g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + .18); s.connect(f).connect(g).connect(master); s.start(t); }
+        for (const off of [0, .5]){ const h = oc.createBufferSource(), hf = oc.createBiquadFilter(), hg = oc.createGain(); h.buffer = noise; hf.type = "highpass"; hf.frequency.value = 7000;
+          hg.gain.setValueAtTime(.15, t + off * beat); hg.gain.exponentialRampToValueAtTime(.001, t + off * beat + .05); h.connect(hf).connect(hg).connect(master); h.start(t + off * beat); }
+        if (withBass){ const b = oc.createOscillator(), bg = oc.createGain(), bf = oc.createBiquadFilter(); b.type = "sawtooth"; bf.type = "lowpass"; bf.frequency.value = 300;
+          b.frequency.value = bassNotes[Math.floor(i / 4) % 8]; bg.gain.setValueAtTime(.35, t); bg.gain.exponentialRampToValueAtTime(.001, t + beat * .9); b.connect(bf).connect(bg).connect(master); b.start(t); b.stop(t + beat); }
+      }
+      return oc.startRendering();
+    };
+    const [plain, full] = await Promise.all([renderLoop(false), renderLoop(true)]);
+    const plan = [plain, full, full, full, full, full, plain], ll = plain.length;
+    const buf = ac().createBuffer(2, ll * plan.length, sr);
+    for (let c = 0; c < 2; c++){ const out = buf.getChannelData(c); plan.forEach((L, n) => out.set(L.getChannelData(c), n * ll)); }
+    const r = {id:uid(), type:"single", title:"Demo Beat", year:String(new Date().getFullYear()), cover:"", tracks:[{id:uid(), title:"Demo Beat (example)", dur:buf.duration}]};
+    AUDIO.set(r.tracks[0].id, buf); S.releases.push(r); curTrack = r.tracks[0].id; startT = loopLen; touch(); loadEditor();
+    setStatus("#snipStatus", "Demo beat loaded. Drag the window and press Play snippet.");
+  } catch(err){ setStatus("#snipStatus", "Couldn't build the demo beat in this browser.", "err"); }
+  btn.disabled = false;
+});
+
+function loadEditor(){
+  stopPlay();
+  const buf = curTrack && AUDIO.get(curTrack);
+  $("#snipEmpty").hidden = !!buf; $("#snipEditor").hidden = !buf;
+  if (!buf) return;
+  $("#snipTrack").value = curTrack;
+  const sl = $("#snipStart"); sl.max = Math.max(0, buf.duration - SNIP).toFixed(1);
+  startT = Math.min(startT, +sl.max); sl.value = startT;
+  peaksCache = null; draw(); readout();
+}
+let peaksCache = null;
+function draw(head){
+  const buf = AUDIO.get(curTrack); if (!buf) return;
+  const cv = $("#wave"), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  if (cv.width !== w * dpr){ cv.width = w * dpr; cv.height = h * dpr; peaksCache = null; }
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const cs = getComputedStyle(document.documentElement), acc = cs.getPropertyValue("--accent").trim(), mute = cs.getPropertyValue("--muted").trim(), line = cs.getPropertyValue("--line").trim();
+  if (!peaksCache || peaksCache.length !== w){
+    const d = buf.getChannelData(0), step = Math.max(1, Math.floor(d.length / w)); peaksCache = new Float32Array(w);
+    for (let x = 0; x < w; x++){ let m = 0; const o = x * step; for (let i = 0; i < step; i += 16){ const v = Math.abs(d[o + i] || 0); if (v > m) m = v; } peaksCache[x] = m; }
+  }
+  const x0 = startT / buf.duration * w, x1 = Math.min(buf.duration, startT + SNIP) / buf.duration * w;
+  g.fillStyle = acc; g.globalAlpha = .14; g.fillRect(x0, 0, x1 - x0, h); g.globalAlpha = 1;
+  for (let x = 0; x < w; x++){ const v = peaksCache[x] * (h * .45); g.fillStyle = x >= x0 && x <= x1 ? acc : mute; g.globalAlpha = x >= x0 && x <= x1 ? 1 : .45; g.fillRect(x, h / 2 - v, 1, Math.max(1, v * 2)); }
+  g.globalAlpha = 1; g.fillStyle = acc; g.fillRect(x0, 0, 2, h); g.fillRect(x1 - 2, 0, 2, h);
+  g.strokeStyle = line; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+  if (head != null){ const hx = head / buf.duration * w; g.fillStyle = cs.getPropertyValue("--ink").trim(); g.fillRect(hx, 0, 2, h); }
+}
+function readout(){
+  const buf = AUDIO.get(curTrack); if (!buf) return;
+  const len = Math.min(SNIP, buf.duration - startT);
+  $("#roStart").textContent = fmt(startT); $("#roEnd").textContent = fmt(startT + len); $("#roLen").textContent = fmt(len); $("#roDur").textContent = fmt(buf.duration);
+}
+$("#snipStart").addEventListener("input", e => { startT = +e.target.value; stopPlay(); draw(); readout(); });
+(() => {
+  const box = $("#waveBox"); let drag = null;
+  box.addEventListener("pointerdown", e => { const buf = AUDIO.get(curTrack); if (!buf) return; box.setPointerCapture(e.pointerId);
+    const w = box.clientWidth, t = e.offsetX / w * buf.duration; drag = {off: (t >= startT && t <= startT + SNIP) ? t - startT : SNIP / 2}; move(e); });
+  box.addEventListener("pointermove", e => { if (drag) move(e); });
+  box.addEventListener("pointerup", () => drag = null);
+  function move(e){ const buf = AUDIO.get(curTrack), w = box.clientWidth; const t = e.offsetX / w * buf.duration - drag.off;
+    startT = Math.max(0, Math.min(Math.max(0, buf.duration - SNIP), t)); $("#snipStart").value = startT; stopPlay(); draw(); readout(); }
+})();
+window.addEventListener("resize", () => { peaksCache = null; draw(); });
+
+function stopPlay(){ if (playing){ try { playing.stop(); } catch(e){} playing = null; } $("#playSnip").textContent = "Play snippet"; }
+$("#playSnip").addEventListener("click", () => {
+  if (playing){ stopPlay(); draw(); return; }
+  const buf = AUDIO.get(curTrack); if (!buf) return;
+  const ctx = ac(); ctx.resume();
+  const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = buf; src.connect(g).connect(ctx.destination);
+  const len = Math.min(SNIP, buf.duration - startT), now = ctx.currentTime;
+  g.gain.setValueAtTime($("#fadeIn").checked ? 0 : 1, now); if ($("#fadeIn").checked) g.gain.linearRampToValueAtTime(1, now + 2);
+  if ($("#fadeOut").checked){ g.gain.setValueAtTime(1, now + len - 3); g.gain.linearRampToValueAtTime(0, now + len); }
+  src.start(now, startT, len); playing = src; playStartedAt = now; $("#playSnip").textContent = "Stop";
+  src.onended = () => { if (playing === src){ playing = null; $("#playSnip").textContent = "Play snippet"; draw(); } };
+  const tick = () => { if (playing !== src) return; draw(startT + (ctx.currentTime - playStartedAt)); requestAnimationFrame(tick); }; tick();
+});
+
+function renderSegment(buf, start, len, fi, fo){
+  const sr = buf.sampleRate, n = Math.floor(len * sr), off = Math.floor(start * sr), chans = Math.min(2, buf.numberOfChannels);
+  const out = [];
+  for (let c = 0; c < chans; c++){
+    const src = buf.getChannelData(c), d = new Float32Array(n);
+    for (let i = 0; i < n; i++){
+      let g = 1; const t = i / sr;
+      if (fi && t < 2) g = t / 2;
+      if (fo && t > len - 3) g = Math.min(g, (len - t) / 3);
+      d[i] = (src[off + i] || 0) * g;
+    }
+    out.push(d);
+  }
+  return {chans: out, sr};
+}
+async function toMp3(seg, kbps, onProg){
+  const ok = [8000,11025,12000,16000,22050,24000,32000,44100,48000];
+  let {chans, sr} = seg;
+  if (!ok.includes(sr)){ // resample to 44.1k
+    const ratio = 44100 / sr; chans = chans.map(d => { const o = new Float32Array(Math.floor(d.length * ratio)); for (let i = 0; i < o.length; i++) o[i] = d[Math.floor(i / ratio)] || 0; return o; }); sr = 44100;
+  }
+  const toI16 = d => { const o = new Int16Array(d.length); for (let i = 0; i < d.length; i++){ const s = Math.max(-1, Math.min(1, d[i])); o[i] = s < 0 ? s * 32768 : s * 32767; } return o; };
+  const L = toI16(chans[0]), R = chans[1] ? toI16(chans[1]) : null;
+  const enc = new lamejs.Mp3Encoder(R ? 2 : 1, sr, kbps), parts = [], block = 1152;
+  for (let i = 0; i < L.length; i += block){
+    const b = R ? enc.encodeBuffer(L.subarray(i, i + block), R.subarray(i, i + block)) : enc.encodeBuffer(L.subarray(i, i + block));
+    if (b.length) parts.push(new Uint8Array(b));
+    if (i % (block * 400) === 0){ onProg && onProg(i / L.length); await new Promise(r => setTimeout(r, 0)); }
+  }
+  const end = enc.flush(); if (end.length) parts.push(new Uint8Array(end));
+  return new Blob(parts, {type:"audio/mpeg"});
+}
+const blobToDataUrl = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+
+$("#makeSnip").addEventListener("click", async () => {
+  const buf = AUDIO.get(curTrack); if (!buf) return;
+  if (typeof lamejs === "undefined"){ setStatus("#snipStatus", "The MP3 encoder didn't load. Check your connection and reload the page.", "err"); return; }
+  const btn = $("#makeSnip"); btn.disabled = true;
+  try {
+    const len = Math.min(SNIP, buf.duration - startT);
+    const seg = renderSegment(buf, startT, len, $("#fadeIn").checked, $("#fadeOut").checked);
+    const blob = await toMp3(seg, +$("#bitrate").value, p => setStatus("#snipStatus", "Encoding MP3… " + Math.round(p * 100) + "%"));
+    const x = trackById(curTrack), id = uid();
+    S.snippets.filter(s => s.trackId === curTrack).forEach(s => { SNIPS.delete(s.id); media.del("snips", s.id); });
+    S.snippets = S.snippets.filter(s => s.trackId !== curTrack);
+    S.snippets.push({id, trackId:curTrack, title:x.t.title, release:x.r.title, start:startT, len, size:blob.size});
+    await media.put("snips", id, blob); saveNow();
+    // keep a decoded copy of the segment for in-app playback
+    const pb = ac().createBuffer(seg.chans.length, seg.chans[0].length, seg.sr); seg.chans.forEach((d, c) => pb.copyToChannel(d, c));
+    SNIPS.set(id, {blob, buffer:pb, dataUrl: await blobToDataUrl(blob)});
+    setStatus("#snipStatus", `Snippet ready: ${fmt(len)} MP3, ${(blob.size / 1048576).toFixed(1)} MB.`, "ok");
+    renderSnipLists(); renderReleases();
+  } catch(err){ setStatus("#snipStatus", "Encoding failed: " + (err.message || err), "err"); }
+  btn.disabled = false;
+});
+function fileBase(s){ return ((S.intake.name || "Artist") + " - " + (s.title || "Snippet") + " (snippet)").replace(/[\\/:*?"<>|]/g, ""); }
+function renderSnipLists(){
+  const live = S.snippets.filter(s => SNIPS.has(s.id));
+  const html = live.length ? live.map(s => `<div class="snip"><div style="min-width:0"><strong>${esc(s.title)}</strong> <span class="pill">${fmt(s.start)}–${fmt(s.start + s.len)}</span><br><span class="hint" style="margin:0">${esc(s.release)} · ${(s.size/1048576).toFixed(1)} MB MP3</span></div>
+    <div class="row"><button class="btn small" type="button" data-sp="${s.id}">Play</button>${CAN_SHARE_AUDIO ? `<button class="btn small" type="button" data-share="${s.id}">Share</button>` : ""}<button class="btn small primary" type="button" data-save="${s.id}">Save MP3</button></div></div>`).join("")
+    : `<div class="empty">No snippets yet. Cut one in the Snippets tab.</div>`;
+  $("#snipList").innerHTML = html; $("#snipList2").innerHTML = html;
+}
+const CAN_SHARE_AUDIO = !!shareable(new Blob([new Uint8Array(4)]), ["test.mp3"], "audio/mpeg");
+let snipPlayer = null;
+document.addEventListener("click", async e => {
+  const p = e.target.closest("[data-sp]");
+  if (p){ if (snipPlayer){ try{snipPlayer.stop();}catch(_){} snipPlayer = null; if (p.dataset.playing){ delete p.dataset.playing; p.textContent = p.dataset.label || "Play"; return; } }
+    document.querySelectorAll("[data-sp][data-playing]").forEach(b => { delete b.dataset.playing; b.textContent = b.dataset.label || "Play"; });
+    const sn = SNIPS.get(p.dataset.sp); if (!sn) return; const ctx = ac(); ctx.resume(); const s = ctx.createBufferSource(); s.buffer = sn.buffer; s.connect(ctx.destination); s.start();
+    snipPlayer = s; p.dataset.label = p.dataset.label || p.textContent; p.dataset.playing = "1"; p.textContent = "Stop"; s.onended = () => { if (snipPlayer === s){ snipPlayer = null; delete p.dataset.playing; p.textContent = p.dataset.label; } }; }
+  const sv = e.target.closest("[data-save]");
+  if (sv){ const s = S.snippets.find(x => x.id === sv.dataset.save), sn = SNIPS.get(s.id);
+    try {
+      if (HOSTED){ await saveOut(fileBase(s) + ".mp3", sn.blob); setStatus("#snipStatus", "Saved the MP3. Send it with AirDrop, Quick Share or any messaging app.", "ok"); }
+      else { // claude.ai only accepts certain file types, so the MP3 goes inside a zip there
+        const zip = new JSZip(); zip.file(fileBase(s) + ".mp3", sn.blob); const z = await zip.generateAsync({type:"blob", compression:"STORE"});
+        await saveOut(fileBase(s) + ".zip", z); setStatus("#snipStatus", "Saved. Unzip it to get the MP3, then AirDrop or Quick Share it.", "ok"); }
+    } catch(err){ if (err.code !== "declined") setStatus("#snipStatus", "Couldn't save: " + (err.message || err.code), "err"); } }
+  const sh = e.target.closest("[data-share]");
+  if (sh){ const s = S.snippets.find(x => x.id === sh.dataset.share), sn = SNIPS.get(s.id);
+    const f = shareable(sn.blob, [fileBase(s) + ".mp3"], "audio/mpeg");
+    if (!f){ setStatus("#snipStatus", "This device can't share audio directly. Save the MP3, then send it from your files.", "err"); return; }
+    try { await shareOut(f, s.title); } catch(err){ setStatus("#snipStatus", "Sharing didn't go through. Save the MP3 instead.", "err"); } }
+});
+function setStatus(sel, msg, kind){ const el = $(sel); if (!el) return; el.textContent = msg; el.className = "status" + (kind ? " " + kind : ""); }
+
+/* ---------- research ---------- */
+function renderResearch(){
+  const n = S.intake.name.trim(); $("#lookName").textContent = n || "Enter your artist name in Q1";
+  const q = encodeURIComponent(n ? `"${n}"` : ""), qa = encodeURIComponent(n);
+  const L = [
+    ["Google", "Everything", `https://www.google.com/search?q=${q}+music`],
+    ["Google News", "Press & interviews", `https://news.google.com/search?q=${q}`],
+    ["YouTube", "Videos & live sets", `https://www.youtube.com/results?search_query=${qa}`],
+    ["Spotify", "Streaming profile", `https://open.spotify.com/search/${qa}`],
+    ["Apple Music", "Streaming profile", `https://music.apple.com/us/search?term=${qa}`],
+    ["SoundCloud", "Uploads & demos", `https://soundcloud.com/search?q=${qa}`],
+    ["Bandcamp", "Releases & merch", `https://bandcamp.com/search?q=${qa}`],
+    ["Instagram", "Tagged posts", `https://www.google.com/search?q=${q}+site%3Ainstagram.com`],
+    ["TikTok", "Clips using your sound", `https://www.tiktok.com/search?q=${qa}`],
+    ["Discogs", "Credits & discography", `https://www.discogs.com/search/?q=${qa}&type=all`],
+    ["Songkick", "Past & upcoming shows", `https://www.songkick.com/search?query=${qa}`],
+    ["Genius", "Lyrics & credits", `https://genius.com/search?q=${qa}`],
+  ];
+  $("#searchLinks").innerHTML = n ? L.map(([a, b, u]) => `<a href="${u}" target="_blank" rel="noopener">${a}<small>${b}</small></a>`).join("") : `<div class="empty" style="grid-column:1/-1">Add your name in the Intake tab to build these searches.</div>`;
+}
+let lookResult = null;
+$("#runLookup").addEventListener("click", async () => {
+  const n = S.intake.name.trim(); if (!n){ setStatus("#lookStatus", "Add your artist name in Q1 first.", "err"); return; }
+  const sample = await cap("sample");
+  if (!sample){ setStatus("#lookStatus", "Lookup isn't available in this view. Open the page in claude.ai while signed in.", "err"); return; }
+  const btn = $("#runLookup"); btn.disabled = true; setStatus("#lookStatus", "Looking up " + n + "…");
+  const links = [S.intake.mainLink, S.intake.moreLinks, S.intake.socials].join("\n");
+  try {
+    const r = await sample.json(`You are researching a music artist for their electronic press kit.
+Artist name: ${n}
+Links the artist provided:
+${links}
+
+Report only what you actually know about this specific artist from your training. Do not guess or invent facts, releases, numbers or press. If you don't recognize the artist, say so plainly and set found to false. Many independent artists won't be known; that's fine.
+Reply with only JSON: {"found": boolean, "summary": "2-4 sentences or an explanation that nothing reliable is known", "genres": [strings], "highlights": [short factual strings you are confident about], "checkThese": [specific things the artist should verify or search for]}`, {modelTier:"default"});
+    lookResult = r;
+    const li = a => (a && a.length) ? `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "<p>None.</p>";
+    $("#lookOut").innerHTML = `<p><span class="pill ${r.found ? "acc" : ""}">${r.found ? "Some info found · verify before using" : "No reliable info found"}</span></p><p>${esc(r.summary)}</p>` +
+      (r.genres?.length ? `<p class="eyebrow">Genres</p><p>${esc(r.genres.join(", "))}</p>` : "") +
+      `<p class="eyebrow">Highlights</p>${li(r.highlights)}<p class="eyebrow">Worth checking</p>${li(r.checkThese)}`;
+    $("#lookApply").hidden = !(r.highlights && r.highlights.length);
+    setStatus("#lookStatus", "Done. Use the search links to confirm anything before it goes in your kit.", "ok");
+  } catch(err){ setStatus("#lookStatus", err.code === "rate_limited" ? "Too many requests. Wait a minute and try again." : err.code === "not_granted" ? "Lookup needs your permission to ask Claude." : "Lookup failed. Try again in a moment.", "err"); }
+  btn.disabled = false;
+});
+$("#applyHi").addEventListener("click", () => {
+  const add = (lookResult?.highlights || []).filter(h => !S.intake.highlights.includes(h));
+  S.intake.highlights = [S.intake.highlights.trim(), ...add].filter(Boolean).join("\n"); renderIntake(); changed("highlights");
+  setStatus("#lookStatus", add.length + " highlight(s) added to Q7. Edit them in the Intake tab.", "ok");
+});
+let bioDraft = "";
+$("#runBio").addEventListener("click", async () => {
+  const i = S.intake; if (i.bio.trim().length < 20){ setStatus("#bioStatus", "Write a few sentences in Q2 first.", "err"); return; }
+  const sample = await cap("sample");
+  if (!sample){ setStatus("#bioStatus", "The bio writer isn't available in this view. Open the page in claude.ai while signed in.", "err"); return; }
+  const btn = $("#runBio"); btn.disabled = true; $("#bioOut").textContent = "Writing…"; setStatus("#bioStatus", "");
+  try {
+    const {text} = await sample(`Write a professional electronic press kit bio for the music artist "${i.name || "the artist"}".
+Use ONLY facts from the notes below. Do not invent places, dates, numbers, collaborators or press. Third person, present tense, 130-180 words, two short paragraphs, confident but not hype. Reply with the bio text only, no title.
+
+Artist's notes:
+${i.bio}
+
+Career highlights:
+${i.highlights || "(none given)"}`, {onText: ({text}) => { $("#bioOut").textContent = text; }});
+    bioDraft = text.trim(); $("#bioOut").textContent = bioDraft; $("#bioApply").hidden = false;
+  } catch(err){ $("#bioOut").textContent = "Your polished bio will appear here."; setStatus("#bioStatus", err.code === "rate_limited" ? "Too many requests. Wait a minute and try again." : "The bio writer couldn't finish. Try again.", "err"); }
+  btn.disabled = false;
+});
+$("#useBio").addEventListener("click", () => { S.intake.bio = bioDraft; renderIntake(); changed("bio"); setStatus("#bioStatus", "Saved to Q2.", "ok"); });
+
+/* ---------- videos & sharing ---------- */
+function allMusicLinks(){ return parseLinks([S.intake.mainLink, S.intake.moreLinks].join("\n")); }
+function renderShare(){
+  const vids = allMusicLinks().filter(isVideo), socials = parseLinks(S.intake.socials);
+  const name = S.intake.name || "my new video";
+  $("#videoList").innerHTML = vids.length ? `<div class="snip-list">` + vids.map(v => {
+    const u = encodeURIComponent(v.url), txt = encodeURIComponent(`${v.label || "New video"} by ${name}`);
+    return `<div class="snip"><div style="min-width:0"><strong>${esc(v.label || v.plat + " video")}</strong><br><span class="mono">${esc(v.url)}</span></div>
+      <div class="row">
+        <a class="btn small" href="https://twitter.com/intent/tweet?url=${u}&text=${txt}" target="_blank" rel="noopener">Post to X</a>
+        <a class="btn small" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener">Facebook</a>
+        <a class="btn small" href="https://www.threads.net/intent/post?text=${txt}%20${u}" target="_blank" rel="noopener">Threads</a>
+        <button class="btn small" type="button" data-copy="${esc(v.url)}">Copy link</button>
+      </div></div>`; }).join("") + `</div>
+      <p class="hint" style="margin-top:12px">Your profiles from Q6: ${socials.length ? socials.map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.plat)}</a>`).join(" · ") : "none yet"}. Instagram and TikTok don't accept shared links from the web, so copy the link and add it to your bio or story there.</p>`
+    : `<div class="empty">No video links found yet. Paste YouTube, Vimeo or TikTok video links into Q4 or Q5 and they appear here.</div>`;
+  $("#epkUrl").value = S.epkUrl || "";
+  renderQR();
+}
+function renderQR(){
+  const u = S.epkUrl.trim(); $("#nfcUrl").textContent = u || "your kit link"; const box = $("#qr"); box.innerHTML = "";
+  if (!u){ box.innerHTML = `<span style="color:#555;font-size:12px;text-align:center;padding:10px">Add your kit link to make a QR code</span>`; return; }
+  try { new QRCode(box, {text:u, width:160, height:160, correctLevel:QRCode.CorrectLevel.M}); } catch(e){ box.textContent = "QR unavailable"; }
+}
+$("#epkUrl").addEventListener("input", e => { S.epkUrl = e.target.value; save(); renderQR(); });
+$("#copyUrl").addEventListener("click", () => copyText(S.epkUrl, "#copyStatus"));
+document.addEventListener("click", e => { const c = e.target.closest("[data-copy]"); if (c) copyText(c.dataset.copy, null, c); });
+async function copyText(t, statusSel, btn){
+  if (!t) return;
+  try { await navigator.clipboard.writeText(t); if (statusSel) setStatus(statusSel, "Copied.", "ok"); if (btn){ const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = o, 1400); } }
+  catch(e){ if (statusSel) setStatus(statusSel, "Select the link above and copy it.", "err"); }
+}
+
+/* ---------- EPK render ---------- */
+function epkHTML(mode){ // mode: "preview" | "export"
+  const i = S.intake, st = lookFrom(i.style), look = S.styleOv !== "auto" ? S.styleOv : st.look;
+  const accent = S.styleOv === "auto" && st.accent ? st.accent : "";
+  const links = allMusicLinks(), vids = links.filter(isVideo), music = links.filter(l => !isVideo(l)), socials = parseLinks(i.socials);
+  const c = contactBits(i.contact), name = i.name || "Artist Name";
+  const hi = i.highlights.split(/\n+/).map(s => s.trim()).filter(Boolean);
+  const vid0 = vids[0]?.url;
+  const ctaMap = {
+    book:["Book " + name, c.email ? "mailto:" + c.email + "?subject=" + encodeURIComponent("Booking inquiry: " + name) : "#contact"],
+    business:["Business inquiries", c.email ? "mailto:" + c.email : "#contact"],
+    listen:["Listen now", i.mainLink ? parseLinks(i.mainLink)[0]?.url : "#music"],
+    watch:["Watch videos", vid0 || "#videos"],
+    management:["Contact management", c.email ? "mailto:" + c.email : "#contact"],
+    other:[i.ctaOther || "Get in touch", c.email ? "mailto:" + c.email : "#contact"],
+  };
+  const ctas = (i.cta || []).map((k, n) => { const [lab, href] = ctaMap[k]; const ext = /^https?:/.test(href);
+    return `<a class="e-cta${n ? " alt" : ""}" href="${esc(href)}"${ext ? ' target="_blank" rel="noopener"' : ""}>${esc(lab)}</a>`; }).join("");
+  const snipFor = id => S.snippets.find(s => s.trackId === id && SNIPS.has(s.id));
+  const rels = S.releases.filter(r => r.title !== "Demo Beat" || S.snippets.some(s => r.tracks.some(t => t.id === s.trackId)));
+  const relHTML = rels.map(r => `<div class="e-rel">${coverHTML(r)}<h3>${esc(r.title)}</h3><p>${r.type === "ep" ? "EP" : r.type[0].toUpperCase() + r.type.slice(1)} · ${esc(r.year)}</p>
+      ${r.type !== "single" || r.tracks.length > 1 ? `<ol>${r.tracks.map(t => { const sn = snipFor(t.id);
+        return `<li>${esc(t.title)}${sn ? (mode === "export" ? `<audio controls preload="none" src="${SNIPS.get(sn.id).dataUrl}"></audio>` : `<button class="e-play" type="button" data-sp="${sn.id}">Play 1:30</button>`) : ""}</li>`; }).join("")}</ol>`
+        : (() => { const sn = snipFor(r.tracks[0]?.id); return sn ? (mode === "export" ? `<audio controls preload="none" src="${SNIPS.get(sn.id).dataUrl}"></audio>` : `<button class="e-play" type="button" data-sp="${sn.id}" style="margin:8px 0 0">Play 1:30</button>`) : ""; })()}
+    </div>`).join("");
+  const initials = name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const linkBtns = arr => arr.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label || l.plat)}</a>`).join("");
+  return {look, html: `<div class="epk t-${look}"${accent ? ` style="--e-acc:${accent}"` : ""}><div class="e-in">
+    <section class="e-hero">
+      <div><div class="e-kicker">Electronic Press Kit</div><h1 class="e-name">${esc(name)}</h1>
+        <p class="e-bio" style="color:var(--e-mute)">${esc((i.bio.split(/(?<=\.)\s/)[0] || "").slice(0, 220))}</p>
+        <div class="e-ctas">${ctas}</div></div>
+      <div class="e-photo">${S.photo ? `<img src="${S.photo}" alt="${esc(name)}">` : esc(initials)}</div>
+    </section>
+    ${i.bio ? `<section><h2 class="e-h">Bio</h2><div class="e-bio">${esc(i.bio)}</div></section>` : ""}
+    ${relHTML ? `<section id="music"><h2 class="e-h">Music</h2><div class="e-rels">${relHTML}</div>${music.length ? `<div class="e-links" style="margin-top:20px">${linkBtns(music)}</div>` : ""}</section>`
+      : music.length ? `<section id="music"><h2 class="e-h">Music</h2><div class="e-links">${linkBtns(music)}</div></section>` : ""}
+    ${vids.length ? `<section id="videos"><h2 class="e-h">Videos</h2><div class="e-links">${linkBtns(vids)}</div></section>` : ""}
+    ${hi.length ? `<section><h2 class="e-h">Highlights</h2><ul class="e-list">${hi.map(h => `<li>${esc(h)}</li>`).join("")}</ul></section>` : ""}
+    ${socials.length || i.photos ? `<section><h2 class="e-h">Follow &amp; press photos</h2><div class="e-links">${linkBtns(socials)}${i.photos ? `<a href="${esc(parseLinks(i.photos)[0]?.url || i.photos)}" target="_blank" rel="noopener">Download press photos</a>` : ""}</div></section>` : ""}
+    ${i.contact ? `<section id="contact"><h2 class="e-h">Booking &amp; contact</h2><div class="e-contact">${esc(i.contact)}</div></section>` : ""}
+    <div class="e-foot">${esc(name)} · Press kit updated ${new Date().toLocaleDateString(undefined, {month:"long", year:"numeric"})}</div>
+  </div></div>`};
+}
+function renderEPK(){
+  const {look, html} = epkHTML("preview");
+  $("#epkPreview").innerHTML = html;
+  $("#epkLook").textContent = "Look: " + LOOKS[look].name + (S.styleOv === "auto" ? " (from Q9)" : "");
+  const miss = REQ.filter(q => !filled(q)).length;
+  $("#epkMissing").textContent = miss ? miss + " required answer" + (miss > 1 ? "s" : "") + " missing" : "All required answers in";
+  $("#styleOv").value = S.styleOv;
+}
+$("#styleOv").addEventListener("change", e => { S.styleOv = e.target.value; save(); renderEPK(); });
+$("#photoFile").addEventListener("change", async e => { if (e.target.files[0]){ S.photo = await shrinkImage(e.target.files[0], 900); save(); renderEPK(); } });
+$("#exportEpk").addEventListener("click", async () => {
+  const {html} = epkHTML("export");
+  const css = [...document.querySelectorAll("style")].map(s => s.textContent).join("\n");
+  const fonts = document.querySelector('link[rel=stylesheet]').href;
+  const name = S.intake.name || "Artist";
+  const doc = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(name)} — Electronic Press Kit</title><meta name="description" content="${esc(S.intake.bio.slice(0, 150))}">
+<link rel="stylesheet" href="${fonts}"><style>${css}
+body{margin:0;background:var(--e-bg,#fff)} .epk{min-height:100vh}</style></head><body>${html}</body></html>`;
+  try { await saveOut(name.replace(/[\\/:*?"<>|]/g, "") + " EPK.html", doc, "text/html");
+    setStatus("#epkStatus", "Exported. Host the file online, then paste its link in the Videos & sharing tab for your NFC tag and QR code.", "ok");
+  } catch(err){ if (err.code !== "declined") setStatus("#epkStatus", "Export failed: " + (err.message || err.code), "err"); }
+});
+
+/* ---------- Hit Me Up: build ---------- */
+const slug = s => String(s || "x").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "x";
+const dataUrlToBlob = d => { const [h, b] = d.split(","); const bin = atob(b); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], {type:(h.match(/data:([^;]+)/) || [0, "image/jpeg"])[1]}); };
+function vcard(i){
+  const c = contactBits(i.contact), first = String(i.contact).split(/\n/)[0].replace(/,.*$/, "").trim();
+  const e = s => String(s).replace(/([,;\\])/g, "\\$1");
+  return ["BEGIN:VCARD","VERSION:3.0", "FN:" + e(first && !first.includes("@") ? first : (i.name || "Booking")), "ORG:" + e(i.name || ""), "TITLE:" + e("Booking / Management for " + (i.name || "artist")),
+    c.email ? "EMAIL;TYPE=WORK:" + c.email : "", c.phone ? "TEL;TYPE=WORK:" + c.phone : "", i.mainLink ? "URL:" + (parseLinks(i.mainLink)[0]?.url || "") : "",
+    "NOTE:" + e("Sent with Hit Me Up"), "END:VCARD"].filter(Boolean).join("\r\n");
+}
+// mode "preview": images as data URLs, audio as snip:<id>. mode "export": real paths + files to zip.
+function buildHMU(mode){
+  const i = S.intake, st = lookFrom(i.style), look = S.styleOv !== "auto" ? S.styleOv : st.look;
+  const links = allMusicLinks(), c = contactBits(i.contact), files = {};
+  const ctaMap = {
+    book:["Book " + (i.name || "me"), c.email ? "mailto:" + c.email + "?subject=" + encodeURIComponent("Booking inquiry: " + (i.name || "")) : ""],
+    business:["Business inquiries", c.email ? "mailto:" + c.email : ""], management:["Contact management", c.email ? "mailto:" + c.email : ""],
+    listen:["Listen now", parseLinks(i.mainLink)[0]?.url || ""], watch:["Watch videos", links.find(isVideo)?.url || ""],
+    other:[i.ctaOther || "Get in touch", c.email ? "mailto:" + c.email : ""]
+  };
+  let photo = "";
+  if (S.photo){ if (mode === "export"){ photo = "images/photo.jpg"; files[photo] = dataUrlToBlob(S.photo); } else photo = S.photo; }
+  const rels = S.releases.filter(r => r.title !== "Demo Beat" || S.snippets.some(s => SNIPS.has(s.id) && r.tracks.some(t => t.id === s.trackId)));
+  let n = 0;
+  const releases = rels.map((r, ri) => {
+    let cover = "";
+    if (r.cover){ if (mode === "export"){ cover = `images/cover-${ri + 1}.jpg`; files[cover] = dataUrlToBlob(r.cover); } else cover = r.cover; }
+    return {title:r.title, type:r.type === "ep" ? "EP" : r.type[0].toUpperCase() + r.type.slice(1), year:r.year, cover,
+      tracks:r.tracks.map(t => { const sn = S.snippets.find(s => s.trackId === t.id && SNIPS.has(s.id)); let snippet = "";
+        if (sn){ if (mode === "export"){ snippet = `audio/${String(++n).padStart(2, "0")}-${slug(t.title)}.mp3`; files[snippet] = SNIPS.get(sn.id).blob; } else snippet = "snip:" + sn.id; }
+        return {title:t.title, snippet, start:sn ? Math.round(sn.start) : null, length:sn ? Math.round(sn.len) : null}; })};
+  });
+  const manifest = {
+    format:"hitmeup", version:1, created:new Date().toISOString(),
+    artist:{name:i.name, tagline:(i.bio.split(/(?<=\.)\s/)[0] || "").slice(0, 200), bio:i.bio, photo},
+    look:{theme:look, accent:S.styleOv === "auto" ? st.accent : ""},
+    cta:(i.cta || []).map(k => ({kind:k, label:ctaMap[k][0], href:ctaMap[k][1]})).filter(x => x.href),
+    highlights:i.highlights.split(/\n+/).map(s => s.trim()).filter(Boolean),
+    contact:{text:i.contact, email:c.email, phone:c.phone, vcf:i.contact.trim() ? "contact.vcf" : ""},
+    links:{music:links.filter(l => !isVideo(l)), videos:links.filter(isVideo), socials:parseLinks(i.socials)},
+    photosFolder:parseLinks(i.photos)[0]?.url || "", releases
+  };
+  if (mode === "export" && manifest.contact.vcf) files["contact.vcf"] = vcard(i);
+  return {manifest, files};
+}
+function playerHTML(manifest){
+  const src = document.getElementById("hmu-player").textContent;
+  const fonts = document.querySelector('link[rel=stylesheet]').href;
+  const json = JSON.stringify(manifest).replace(/</g, "\\u003c");
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(manifest.artist.name || "Artist")} · Hit Me Up</title><link rel="stylesheet" href="${fonts}">
+<style>html,body{margin:0;min-height:100%}body{background:#101114}</style></head><body><div id="app"></div>
+<script>${src}<\/script>
+<script>var M=${json};document.body.style.background=getComputedStyle(document.documentElement).getPropertyValue("--h-bg")||"";
+HMUPlayer.mount(document.getElementById("app"),M,{engine:HMUPlayer.htmlEngine(),contactHref:M.contact.vcf});
+setTimeout(function(){var h=document.querySelector(".hmu");if(h)document.body.style.background=getComputedStyle(h).backgroundColor;},0);<\/script>
+</body></html>`;
+}
+const README = name => `HIT ME UP — ${name}
+
+Open player.html in any browser to see and hear this press kit.
+On a phone: unzip first (Files app on iPhone, Files by Google on Android), then tap player.html.
+If you have the Hit Me Up app, open this file directly.
+
+Inside:
+  manifest.json   profile, releases, links, contact (for apps)
+  contact.vcf     tap to save the booking contact
+  audio/          1:30 snippets (MP3)
+  images/         photo and cover art
+`;
+
+function renderHMUSend(){
+  const {manifest, files} = buildHMU("preview");
+  const snips = manifest.releases.reduce((a, r) => a + r.tracks.filter(t => t.snippet).length, 0);
+  const audioBytes = S.snippets.filter(s => SNIPS.has(s.id)).reduce((a, s) => a + s.size, 0);
+  const imgBytes = (S.photo ? S.photo.length * .75 : 0) + S.releases.reduce((a, r) => a + (r.cover ? r.cover.length * .75 : 0), 0);
+  const row = (k, v) => `<li><span>${k}</span><span>${v}</span></li>`;
+  $("#hmuInv").innerHTML =
+    row("Artist", esc(manifest.artist.name || "Not set")) +
+    row("Releases", manifest.releases.length) +
+    row("1:30 snippets", snips + (snips ? "" : " · cut some in Snippets")) +
+    row("Videos · socials", manifest.links.videos.length + " · " + manifest.links.socials.length) +
+    row("Contact card", manifest.contact.vcf ? "Included" : "Add Q8") +
+    row("Estimated size", ((audioBytes + imgBytes + 40000) / 1048576).toFixed(1) + " MB");
+}
+let hmuCurrent = null;
+function showPlayer(manifest, media, label){
+  $("#hmuStageWrap").hidden = false; $("#hmuStageLabel").textContent = label;
+  HMUPlayer.mount($("#hmuStage"), manifest, media); hmuCurrent = true;
+  $("#hmuStageWrap").scrollIntoView({behavior:"smooth", block:"start"});
+}
+$("#hmuClose").addEventListener("click", () => { const st = $("#hmuStage"); if (st._hmuStop) st._hmuStop(); st.innerHTML = ""; $("#hmuStageWrap").hidden = true; });
+$("#hmuPreview").addEventListener("click", () => {
+  const {manifest} = buildHMU("preview");
+  showPlayer(manifest, {img:p => p, engine:HMUPlayer.bufferEngine(p => SNIPS.get(p.slice(5))?.buffer)}, "Preview of your Hit Me Up");
+});
+$("#hmuExport").addEventListener("click", async () => {
+  if (!S.intake.name.trim()){ setStatus("#hmuStatus", "Add your artist name in Q1 first.", "err"); return; }
+  const btn = $("#hmuExport"); btn.disabled = true; setStatus("#hmuStatus", "Packing your Hit Me Up…");
+  try {
+    const {blob, base, name} = await packHMU();
+    // claude.ai only saves known file types, so there it's a .zip; the installed app saves a real .hitmeup
+    const fname = base + (HOSTED ? ".hitmeup" : ".zip");
+    await saveOut(fname, blob);
+    libAdd(name, blob, true).then(renderLib);
+    setStatus("#hmuStatus", `Saved "${fname}" (${(blob.size / 1048576).toFixed(1)} MB).` + (HOSTED ? "" : " Send it as is, or rename it to .hitmeup once the Hit Me Up app is installed."), "ok");
+  } catch(err){ if (err.code !== "declined") setStatus("#hmuStatus", "Export failed: " + (err.message || err.code), "err"); else setStatus("#hmuStatus", ""); }
+  btn.disabled = false;
+});
+async function packHMU(){
+  const {manifest, files} = buildHMU("export");
+  const zip = new JSZip();
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  zip.file("player.html", playerHTML(manifest));
+  zip.file("README.txt", README(manifest.artist.name));
+  for (const [p, data] of Object.entries(files)) zip.file(p, data);
+  const blob = await zip.generateAsync({type:"blob", compression:"DEFLATE", compressionOptions:{level:6}, mimeType:"application/zip"});
+  return {blob, name:manifest.artist.name, base:S.intake.name.replace(/[\\/:*?"<>|]/g, "").trim() + " - Hit Me Up"};
+}
+$("#hmuShare").addEventListener("click", async () => {
+  if (!S.intake.name.trim()){ setStatus("#hmuStatus", "Add your artist name in Q1 first.", "err"); return; }
+  const btn = $("#hmuShare"); btn.disabled = true; setStatus("#hmuStatus", "Packing your Hit Me Up…");
+  try {
+    const {blob, base, name} = await packHMU();
+    // some phones only accept known file types in the share sheet; fall back to .zip
+    const f = shareable(blob, [base + ".hitmeup", base + ".zip"], "application/zip");
+    if (!f){ setStatus("#hmuStatus", "This device's share sheet doesn't take this file type. Use Save, then send it from your Files app.", "err"); }
+    else { const r = await shareOut(f, name + " · Hit Me Up"); libAdd(name, blob, true).then(renderLib);
+      setStatus("#hmuStatus", r === "shared" ? "Sent." : "", r === "shared" ? "ok" : ""); }
+  } catch(err){ setStatus("#hmuStatus", "Sharing didn't go through. Use Save instead.", "err"); }
+  btn.disabled = false;
+});
+
+/* ---------- Hit Me Up: open & library ---------- */
+async function openHMU(blob, label){
+  const zip = await JSZip.loadAsync(blob);
+  const mf = zip.file("manifest.json"); if (!mf) throw new Error("This isn't a Hit Me Up file (no manifest.json inside).");
+  const M = JSON.parse(await mf.async("string"));
+  if (M.format !== "hitmeup") throw new Error("This isn't a Hit Me Up file.");
+  const imgs = {}, paths = [M.artist?.photo, ...(M.releases || []).map(r => r.cover)].filter(Boolean);
+  for (const p of paths){ const f = zip.file(p); if (f) imgs[p] = "data:image/jpeg;base64," + await f.async("base64"); }
+  const cache = new Map();
+  const getBuffer = async p => { if (cache.has(p)) return cache.get(p); const f = zip.file(p); if (!f) return null;
+    const b = await ac().decodeAudioData(await f.async("arraybuffer")); cache.set(p, b); return b; };
+  showPlayer(M, {img:p => imgs[p] || "", engine:HMUPlayer.bufferEngine(getBuffer)}, label || M.artist?.name || "Hit Me Up");
+  return M;
+}
+async function handleFile(f){
+  if (!f) return;
+  setStatus("#hmuOpenStatus", "Opening " + f.name + "…");
+  try { const M = await openHMU(f, f.name); await libAdd(M.artist?.name || f.name, f, false); renderLib(); setStatus("#hmuOpenStatus", "Opened and saved to your library.", "ok"); }
+  catch(err){ setStatus("#hmuOpenStatus", err.message || "That file couldn't be opened.", "err"); }
+}
+$("#hmuFile").addEventListener("change", e => { handleFile(e.target.files[0]); e.target.value = ""; });
+const drop = $("#hmuDrop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => handleFile(e.dataTransfer.files[0]));
+
+// library in IndexedDB (this browser only)
+function idb(){ return new Promise((res, rej) => { try { const r = indexedDB.open("hitmeup-library", 1);
+  r.onupgradeneeded = () => r.result.createObjectStore("kits", {keyPath:"id"}); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch(e){ rej(e); } }); }
+async function libAll(){ try { const db = await idb(); return await new Promise(res => { const q = db.transaction("kits").objectStore("kits").getAll(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); } catch(e){ return []; } }
+async function libAdd(name, blob, mine){ try { const db = await idb(); const all = await libAll();
+  const old = all.find(k => k.name === name && k.mine === mine);
+  await new Promise(res => { const tx = db.transaction("kits", "readwrite"); tx.objectStore("kits").put({id:old ? old.id : uid(), name, mine, added:Date.now(), size:blob.size, blob}); tx.oncomplete = res; tx.onerror = res; }); } catch(e){} }
+async function libDel(id){ try { const db = await idb(); await new Promise(res => { const tx = db.transaction("kits", "readwrite"); tx.objectStore("kits").delete(id); tx.oncomplete = res; tx.onerror = res; }); } catch(e){} }
+async function renderLib(){
+  const all = (await libAll()).sort((a, b) => b.added - a.added);
+  $("#hmuLib").innerHTML = all.length ? all.map(k => `<div class="snip"><div style="min-width:0"><strong>${esc(k.name)}</strong> ${k.mine ? '<span class="pill acc">Yours</span>' : '<span class="pill">Received</span>'}<br>
+    <span class="hint" style="margin:0">${new Date(k.added).toLocaleDateString()} · ${(k.size / 1048576).toFixed(1)} MB</span></div>
+    <div class="row"><button class="btn small primary" type="button" data-libopen="${k.id}">Open</button><button class="btn small" type="button" data-libdel="${k.id}">Remove</button></div></div>`).join("")
+    : `<div class="empty">Hit Me Up files you open or export are kept here on this device.</div>`;
+}
+document.addEventListener("click", async e => {
+  const o = e.target.closest("[data-libopen]"), d = e.target.closest("[data-libdel]");
+  if (o){ const k = (await libAll()).find(x => x.id === o.dataset.libopen); if (k) openHMU(k.blob, k.name).catch(err => setStatus("#hmuOpenStatus", err.message, "err")); }
+  if (d){ await libDel(d.dataset.libdel); renderLib(); }
+});
+
+/* ---------- routing ---------- */
+const VIEWS = ["intake","releases","snippets","research","share","epk","hitmeup"];
+function route(){
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "intake";
+  VIEWS.forEach(x => $("#v-" + x).hidden = x !== v);
+  document.querySelectorAll("nav.tabs a").forEach(a => a.setAttribute("aria-current", a.dataset.v === v ? "page" : "false"));
+  if (v === "releases") renderReleases();
+  if (v === "snippets"){ fillTrackSelect(); loadEditor(); renderSnipLists(); }
+  if (v === "research") renderResearch();
+  if (v === "share"){ renderShare(); renderSnipLists(); }
+  if (v === "epk") renderEPK();
+  if (v === "hitmeup"){ renderHMUSend(); renderLib(); }
+}
+window.addEventListener("hashchange", route);
+
+$("#clearExample").addEventListener("click", () => { S = BLANK(); AUDIO.clear(); SNIPS.clear(); media.clear(); save(); renderIntake(); meter(); $("#exampleBanner").hidden = true; route(); });
+$("#exampleBanner").hidden = !S.isExample;
+
+/* ---------- installed-app extras ---------- */
+// Files that arrive from outside: a tapped .hitmeup, a share from another app, or a song
+const isAudioFile = f => /^audio\//.test(f.type) || /\.(mp3|wav|m4a|aac|flac|ogg|aiff?)$/i.test(f.name);
+async function handleIncoming(f){
+  if (isAudioFile(f)){
+    const title = f.name.replace(/\.[^.]+$/, "");
+    const r = {id:uid(), type:"single", title, year:String(new Date().getFullYear()), cover:"", tracks:[{id:uid(), title, dur:0}]};
+    if (await attachAudio(r.tracks[0].id, f)){ S.releases.unshift(r); curTrack = r.tracks[0].id; startT = 0; touch(); location.hash = "snippets"; route(); }
+    return;
+  }
+  location.hash = "hitmeup"; route(); await handleFile(f);
+}
+if (HOSTED){
+  $("#appBar").hidden = false;
+  $("#hmuExport").textContent = "Save Hit Me Up file";
+  $("#hmuShare").hidden = !shareable(new Blob([new Uint8Array(4)]), ["t.hitmeup", "t.zip"], "application/zip");
+  const net = () => { $("#offlinePill").hidden = navigator.onLine; ["#runLookup", "#runBio"].forEach(s => $(s).disabled = !navigator.onLine); };
+  addEventListener("online", net); addEventListener("offline", net); net();
+  let deferred = null;
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; $("#installBtn").hidden = false; });
+  addEventListener("appinstalled", () => { $("#installBtn").hidden = true; deferred = null; });
+  $("#installBtn").addEventListener("click", async () => { if (!deferred) return; deferred.prompt(); await deferred.userChoice.catch(() => {}); deferred = null; $("#installBtn").hidden = true; });
+  if (IOS && !STANDALONE) $("#iosHint").hidden = false;
+  // Desktop: double-clicked .hitmeup files open here (file_handlers in the manifest)
+  if ("launchQueue" in window) launchQueue.setConsumer(async p => { for (const h of p.files || []) handleIncoming(await h.getFile()); });
+}
+async function takeSharedFiles(){
+  // Android: files shared into the app land in this cache (see sw.js)
+  if (!new URLSearchParams(location.search).has("shared") || !("caches" in window)) return;
+  try { const c = await caches.open("hmu-inbox");
+    for (const req of await c.keys()){ const res = await c.match(req), name = decodeURIComponent(res.headers.get("x-name") || "shared");
+      await handleIncoming(new File([await res.blob()], name, {type:res.headers.get("content-type") || ""})); await c.delete(req); }
+  } catch(e){}
+  history.replaceState(null, "", location.pathname + location.hash);
+}
+
+renderIntake(); meter(); fillTrackSelect(); route();
+restoreMedia().then(() => { fillTrackSelect(); route(); takeSharedFiles(); });
+})();
+</script>
+
+<script>if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script>
+</body></html>
